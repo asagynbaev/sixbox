@@ -37,7 +37,6 @@ function MenuPage() {
 
   return (
     <>
-      <Header active="menu" />
       <section style={{ background: "var(--cream)", padding: "56px 0 40px" }}>
         <div className="container">
           <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>Меню</div>
@@ -141,7 +140,6 @@ function ConstructorPage() {
 
   return (
     <>
-      <Header active="" />
       <section style={{ background: "var(--green-900)", color: "#fff", padding: "56px 0 32px" }}>
         <div className="container">
           <div className="h-eyebrow" style={{ color: "var(--lime-300)" }}>Конструктор рациона</div>
@@ -359,7 +357,6 @@ function SumStat({ l, v, c }) {
 function CartPage() {
   return (
     <>
-      <Header active="" />
       <section style={{ background: "var(--paper)", padding: "40px 0 80px" }}>
         <div className="container">
           <div style={{ fontSize: 13, color: "var(--muted)" }}><span style={{ color: "var(--ink)", fontWeight: 600 }}>Корзина</span> · Оплата · Готово</div>
@@ -452,7 +449,6 @@ function CartPage() {
 function ContactsPage() {
   return (
     <>
-      <Header active="" />
       <section style={{ background: "var(--cream)", padding: "56px 0 32px" }}>
         <div className="container">
           <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>Контакты</div>

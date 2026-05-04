@@ -239,7 +239,6 @@ function SummaryRow({ l, v, accent, big }) {
 function AccountDashboard() {
   return (
     <div style={{ background: "var(--paper)", minHeight: 800 }}>
-      <Header active="" />
       <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: 32 }}>
           <div>
@@ -334,7 +333,6 @@ function AccountDashboard() {
 function Checkout() {
   return (
     <div style={{ background: "var(--paper)", minHeight: 800 }}>
-      <Header active="" />
       <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>
         <div style={{ fontSize: 13, color: "var(--muted)" }}>Корзина · <span style={{ color: "var(--ink)", fontWeight: 600 }}>Оплата</span> · Готово</div>
         <h1 className="h-display" style={{ fontSize: 56, marginTop: 14 }}>Оплата заказа</h1>
