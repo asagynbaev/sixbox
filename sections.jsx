@@ -416,7 +416,7 @@ function Slider({ min, max, value, onChange }) {
 // ---------- Fridge of Trust ----------
 function Fridge() {
   return (
-    <section className="section" style={{ background: "var(--orange-500)", color: "#1a0a00", overflow: "hidden", position: "relative" }}>
+    <section className="section" id="fridge" style={{ background: "var(--orange-500)", color: "#1a0a00", overflow: "hidden", position: "relative" }}>
       <div className="container" style={{ position: "relative" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
           <div>
@@ -598,7 +598,7 @@ function Stat({ v, l }) {
 // ---------- About / Team ----------
 function Team() {
   return (
-    <section className="section" id="about" style={{ background: "var(--cream)" }}>
+    <section className="section" id="team" style={{ background: "var(--cream)" }}>
       <div className="container">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60 }}>
           <div>
@@ -665,7 +665,7 @@ function FAQ() {
     { q: "Куда вы доставляете в Бишкеке?", a: "По всему городу в пределах объездной. За пределами — стоимость рассчитывается отдельно." },
   ];
   return (
-    <section className="section" style={{ background: "var(--paper)" }}>
+    <section className="section" id="faq" style={{ background: "var(--paper)" }}>
       <div className="container-tight">
         <SectionHeader
           eyebrow="FAQ"

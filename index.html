@@ -54,6 +54,7 @@
 <script type="text/babel" src="sections.jsx"></script>
 <script type="text/babel" src="subpages.jsx"></script>
 <script type="text/babel" src="pages.jsx"></script>
+<script type="text/babel" src="info-pages.jsx"></script>
 
 <script type="text/babel" data-presets="env,react">
 const { useState, useEffect } = React;
@@ -80,8 +81,18 @@ function App() {
   const [page, setPage] = useState("home");
 
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, [page]);
+    window.go = (id, sectionId) => {
+      setPage(id);
+      if (sectionId) {
+        setTimeout(() => {
+          const el = document.getElementById(sectionId);
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 60);
+      } else {
+        window.scrollTo({ top: 0, behavior: "instant" });
+      }
+    };
+  }, []);
 
   const pages = [
     { id: "home", label: "Главная" },
@@ -102,13 +113,22 @@ function App() {
       {page === "checkout" && (<><Checkout /><Footer /></>)}
       {page === "account" && (<><AccountDashboard /><Footer /></>)}
       {page === "contacts" && <ContactsPage />}
+      {page === "blog" && <BlogPage />}
+      {page === "about" && <AboutPage />}
+      {page === "kitchen" && <KitchenPage />}
+      {page === "careers" && <CareersPage />}
+      {page === "partners" && <PartnersPage />}
+      {page === "delivery" && <DeliveryPage />}
+      {page === "allergens" && <AllergensPage />}
+      {page === "privacy" && <LegalPage kind="privacy" />}
+      {page === "offer" && <LegalPage kind="offer" />}
 
       <div className="pagebar" role="tablist">
         {pages.map(p => (
           <button
             key={p.id}
             className={page === p.id ? "active" : ""}
-            onClick={() => setPage(p.id)}
+            onClick={() => window.go(p.id)}
           >
             {p.label}
           </button>

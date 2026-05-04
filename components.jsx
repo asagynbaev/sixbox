@@ -5,13 +5,18 @@ const { useState, useEffect, useMemo, useRef } = React;
 function Logo({ light = false, size = 1 }) {
   const color = light ? "#fff" : "var(--ink)";
   return (
-    <div className="logo" style={{ color, fontSize: `${20 * size}px` }}>
+    <button
+      type="button"
+      onClick={() => window.go?.("home")}
+      className="logo"
+      style={{ color, fontSize: `${20 * size}px`, background: "transparent", border: 0, padding: 0, cursor: "pointer", fontFamily: "inherit" }}
+    >
       <div className="logo-mark" style={{ width: 32 * size, height: 32 * size, fontSize: 16 * size }}>S</div>
-      <div style={{ display: "flex", flexDirection: "column", lineHeight: 0.95 }}>
+      <div style={{ display: "flex", flexDirection: "column", lineHeight: 0.95, alignItems: "flex-start" }}>
         <span style={{ fontWeight: 800, letterSpacing: "0.02em" }}>SIX BOX</span>
         <span style={{ fontSize: 9 * size, fontFamily: "var(--font-body)", fontWeight: 500, letterSpacing: "0.32em", opacity: 0.6, textTransform: "uppercase", marginTop: 2 }}>perfect meals</span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -213,7 +218,53 @@ function Header({ light = false, active = "home", compact = false }) {
 }
 
 // ---------- Footer ----------
+function FooterLink({ children, to, scroll }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => window.go?.(to ?? "home", scroll)}
+        style={{
+          background: "transparent", border: 0, padding: 0, color: "inherit",
+          fontSize: 14, opacity: 0.85, cursor: "pointer", fontFamily: "inherit",
+          textAlign: "left", transition: "opacity .15s",
+        }}
+        onMouseEnter={e => e.currentTarget.style.opacity = 1}
+        onMouseLeave={e => e.currentTarget.style.opacity = 0.85}
+      >{children}</button>
+    </li>
+  );
+}
+
 function Footer() {
+  const cols = [
+    { t: "Сайт", l: [
+      { label: "Меню недели", to: "menu" },
+      { label: "Планы питания", to: "home", scroll: "plans" },
+      { label: "Конструктор", to: "constructor" },
+      { label: "Холодильник доверия", to: "home", scroll: "fridge" },
+      { label: "Блог", to: "blog" },
+    ]},
+    { t: "Компания", l: [
+      { label: "О нас", to: "about" },
+      { label: "Команда поваров", to: "home", scroll: "team" },
+      { label: "Кухня", to: "kitchen" },
+      { label: "Карьера", to: "careers" },
+      { label: "Партнёрам", to: "partners" },
+    ]},
+    { t: "Поддержка", l: [
+      { label: "FAQ", to: "home", scroll: "faq" },
+      { label: "Доставка", to: "delivery" },
+      { label: "Оплата", to: "checkout" },
+      { label: "Аллергены", to: "allergens" },
+      { label: "Контакты", to: "contacts" },
+    ]},
+  ];
+  const socials = [
+    { ic: Icons.insta, href: "https://instagram.com/sixbox.kg", label: "Instagram" },
+    { ic: Icons.tg, href: "https://t.me/sixbox_kg", label: "Telegram" },
+    { ic: Icons.whats, href: "https://wa.me/996555612612", label: "WhatsApp" },
+  ];
   return (
     <footer style={{ background: "var(--green-900)", color: "#fff", padding: "80px 0 36px" }}>
       <div className="container">
@@ -224,45 +275,45 @@ function Footer() {
               Готовое здоровое питание с доставкой по Бишкеку. Рассчитываем калории, готовим на пару и су-вид, привозим утром или вечером.
             </p>
             <div style={{ display: "flex", gap: 8, marginTop: 22 }}>
-              {[Icons.insta, Icons.tg, Icons.whats].map((ic, i) => (
-                <div key={i} style={{
+              {socials.map(s => (
+                <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer" aria-label={s.label} style={{
                   width: 40, height: 40, borderRadius: 10,
                   background: "rgba(255,255,255,.08)",
                   display: "grid", placeItems: "center",
-                }}>{ic}</div>
+                  color: "#fff", transition: "background .15s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.16)"}
+                onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,.08)"}
+                >{s.ic}</a>
               ))}
             </div>
           </div>
-          {[
-            { t: "Сайт", l: ["Меню недели", "Планы питания", "Конструктор", "Холодильник доверия", "Блог"] },
-            { t: "Компания", l: ["О нас", "Команда поваров", "Кухня", "Карьера", "Партнёрам"] },
-            { t: "Поддержка", l: ["FAQ", "Доставка", "Оплата", "Аллергены", "Контакты"] },
-          ].map(c => (
+          {cols.map(c => (
             <div key={c.t}>
               <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.2em", opacity: 0.5, marginBottom: 18 }}>{c.t}</div>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                {c.l.map(x => <li key={x} style={{ fontSize: 14, opacity: 0.85 }}>{x}</li>)}
+                {c.l.map(x => <FooterLink key={x.label} to={x.to} scroll={x.scroll}>{x.label}</FooterLink>)}
               </ul>
             </div>
           ))}
           <div>
             <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.2em", opacity: 0.5, marginBottom: 18 }}>Связь</div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600 }}>+996 555 612 612</div>
+            <a href="tel:+996555612612" style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "#fff" }}>+996 555 612 612</a>
             <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>Каждый день, 8:00 — 22:00</div>
-            <div style={{ marginTop: 16, padding: 12, borderRadius: 14, background: "rgba(255,255,255,.06)", display: "flex", gap: 10, alignItems: "center" }}>
+            <a href="https://maps.google.com/?q=Бишкек,+Ибраимова+115" target="_blank" rel="noopener noreferrer" style={{ marginTop: 16, padding: 12, borderRadius: 14, background: "rgba(255,255,255,.06)", display: "flex", gap: 10, alignItems: "center", color: "#fff" }}>
               {Icons.pin}
               <div>
                 <div style={{ fontSize: 13 }}>Кухня SixBox</div>
                 <div style={{ fontSize: 12, opacity: 0.6 }}>Бишкек, ул. Ибраимова 115</div>
               </div>
-            </div>
+            </a>
           </div>
         </div>
         <div style={{ marginTop: 60, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,.08)", display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.55 }}>
           <div>© 2026 SixBox · perfect meals since 2017</div>
           <div style={{ display: "flex", gap: 24 }}>
-            <span>Политика конфиденциальности</span>
-            <span>Договор оферты</span>
+            <button type="button" onClick={() => window.go?.("privacy")} style={{ background: "transparent", border: 0, color: "inherit", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Политика конфиденциальности</button>
+            <button type="button" onClick={() => window.go?.("offer")} style={{ background: "transparent", border: 0, color: "inherit", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Договор оферты</button>
           </div>
         </div>
       </div>

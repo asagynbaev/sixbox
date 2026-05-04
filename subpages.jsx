@@ -432,4 +432,4 @@ function SectionStep({ n, title, children }) {
   );
 }
 
-Object.assign(window, { MobileHome, MobileCart, AccountDashboard, Checkout });
+Object.assign(window, { MobileHome, MobileCart, AccountDashboard, Checkout, SummaryRow });
