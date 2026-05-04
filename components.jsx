@@ -176,17 +176,39 @@ const NAV_LINKS = [
 
 function Header({ light = false, active = "home", compact = false }) {
   const [open, setOpen] = useState(false);
+  const [menu, setMenu] = useState(false); // user dropdown
   const isLight = light;
+  const user = (typeof useAuthUser === "function") ? useAuthUser() : null;
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(false);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [menu]);
+
   const handleNav = (id) => {
     setOpen(false);
     window.go?.(id);
   };
+
+  const onLoginClick = () => {
+    setOpen(false);
+    if (user) {
+      setMenu(true);
+    } else if (window.openAuth) {
+      window.openAuth();
+    }
+  };
+
+  const phoneShort = user && user.phoneNumber
+    ? user.phoneNumber.replace(/^\+996/, "+996 ").replace(/(\d{3})(\d{3})$/, "$1 $2")
+    : "";
 
   return (
     <header className={`site-header ${isLight ? "site-header-dark" : "site-header-light"}`}>
@@ -208,10 +230,49 @@ function Header({ light = false, active = "home", compact = false }) {
           <div className="site-header-loc">
             {Icons.pin} <span>Бишкек</span>
           </div>
-          <button className={isLight ? "btn btn-ghost-light" : "btn btn-ghost"} style={{ padding: "10px 16px" }}>
-            {Icons.user}
-            <span>Войти</span>
-          </button>
+
+          <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              className={isLight ? "btn btn-ghost-light" : "btn btn-ghost"}
+              style={{ padding: "10px 16px" }}
+              onClick={onLoginClick}
+            >
+              {user ? (
+                <>
+                  <span style={{
+                    width: 22, height: 22, borderRadius: 11,
+                    background: "var(--orange-500)", color: "#1a0a00",
+                    display: "grid", placeItems: "center",
+                    fontSize: 12, fontWeight: 700,
+                  }}>{(user.phoneNumber || "?").slice(-2)}</span>
+                  <span className="site-header-user-label">{phoneShort || "Кабинет"}</span>
+                </>
+              ) : (
+                <>{Icons.user}<span>Войти</span></>
+              )}
+            </button>
+
+            {menu && user && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 8px)", right: 0,
+                minWidth: 220, background: "#fff",
+                border: "1px solid var(--line)", borderRadius: 14,
+                boxShadow: "0 20px 50px -10px rgba(0,0,0,.18)",
+                zIndex: 60, padding: 6, color: "var(--ink)",
+              }}>
+                <div style={{ padding: "12px 14px 14px", borderBottom: "1px solid var(--line)", marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>Вошли как</div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 16, fontWeight: 600, marginTop: 2 }}>{phoneShort}</div>
+                </div>
+                <button onClick={() => { setMenu(false); window.go?.("account"); }} style={dropItemStyle}>{Icons.user} Кабинет</button>
+                <button onClick={() => { setMenu(false); window.go?.("cart"); }} style={dropItemStyle}>{Icons.bag} Корзина</button>
+                <div style={{ height: 1, background: "var(--line)", margin: "6px 0" }} />
+                <button onClick={async () => { setMenu(false); await window.AuthApi?.signOut(); }} style={{ ...dropItemStyle, color: "#c33" }}>Выйти</button>
+              </div>
+            )}
+          </div>
+
           <button className="btn btn-primary site-header-cart" style={{ padding: "10px 18px" }} onClick={() => window.go?.("cart")}>
             {Icons.bag}
             <span className="site-header-cart-label">Корзина</span>
@@ -248,10 +309,34 @@ function Header({ light = false, active = "home", compact = false }) {
             ))}
           </nav>
           <div className="mobile-menu-foot">
-            <button className="btn btn-ghost-light" style={{ width: "100%", justifyContent: "center" }}>
-              {Icons.user} <span>Войти</span>
-            </button>
-            <a href="tel:+996555612612" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+            {user ? (
+              <>
+                <div style={{
+                  padding: 14, borderRadius: 14,
+                  background: "rgba(255,255,255,.06)",
+                  display: "flex", alignItems: "center", gap: 12,
+                }}>
+                  <span style={{
+                    width: 36, height: 36, borderRadius: 18,
+                    background: "var(--orange-500)", color: "#1a0a00",
+                    display: "grid", placeItems: "center",
+                    fontSize: 14, fontWeight: 700,
+                  }}>{(user.phoneNumber || "?").slice(-2)}</span>
+                  <div>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>Вошли как</div>
+                    <div style={{ fontWeight: 600 }}>{phoneShort}</div>
+                  </div>
+                </div>
+                <button className="btn btn-ghost-light" style={{ width: "100%", justifyContent: "center" }} onClick={async () => { setOpen(false); await window.AuthApi?.signOut(); }}>
+                  Выйти
+                </button>
+              </>
+            ) : (
+              <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setOpen(false); window.openAuth?.(); }}>
+                {Icons.user} <span>Войти по номеру</span>
+              </button>
+            )}
+            <a href="tel:+996555612612" className="btn btn-ghost-light" style={{ width: "100%", justifyContent: "center" }}>
               {Icons.phone} <span>+996 555 612 612</span>
             </a>
           </div>
@@ -261,6 +346,15 @@ function Header({ light = false, active = "home", compact = false }) {
     </header>
   );
 }
+
+const dropItemStyle = {
+  display: "flex", alignItems: "center", gap: 10,
+  width: "100%", textAlign: "left",
+  padding: "10px 12px", borderRadius: 8,
+  background: "transparent", color: "inherit",
+  fontSize: 14, fontWeight: 500, cursor: "pointer",
+  fontFamily: "inherit",
+};
 
 // ---------- Footer ----------
 function FooterLink({ children, to, scroll }) {

@@ -15,6 +15,59 @@ if (typeof firebase !== "undefined" && !firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 const db = (typeof firebase !== "undefined") ? firebase.firestore() : null;
+const auth = (typeof firebase !== "undefined" && firebase.auth) ? firebase.auth() : null;
+if (auth) {
+  // Persist user across reloads
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+}
+
+// ---------- Phone Auth helpers ----------
+const AuthApi = {
+  // Subscribe to user changes. Returns unsubscribe.
+  onChange(cb) {
+    if (!auth) { cb(null); return () => {}; }
+    return auth.onAuthStateChanged(cb);
+  },
+  current() {
+    return auth ? auth.currentUser : null;
+  },
+  // Build/refresh invisible reCAPTCHA tied to a DOM element.
+  // Pass an element id (string) or DOM node.
+  ensureRecaptcha(containerIdOrEl) {
+    if (!auth) throw new Error("Firebase Auth не инициализирован");
+    if (window._recaptcha) {
+      try { window._recaptcha.clear(); } catch (e) { /* ignore */ }
+      window._recaptcha = null;
+    }
+    window._recaptcha = new firebase.auth.RecaptchaVerifier(containerIdOrEl, {
+      size: "invisible",
+      callback: () => {},
+      "expired-callback": () => {
+        try { window._recaptcha && window._recaptcha.clear(); } catch (e) { /* ignore */ }
+        window._recaptcha = null;
+      },
+    });
+    return window._recaptcha;
+  },
+  // Send SMS. phone must be E.164 like "+996555612612".
+  async sendCode(phoneE164, recaptchaVerifier) {
+    if (!auth) throw new Error("Firebase Auth не инициализирован");
+    if (!recaptchaVerifier) throw new Error("reCAPTCHA не инициализирован");
+    const result = await auth.signInWithPhoneNumber(phoneE164, recaptchaVerifier);
+    window._confirmationResult = result;
+    return result;
+  },
+  async confirmCode(code) {
+    if (!window._confirmationResult) throw new Error("Сначала отправьте SMS-код");
+    const cred = await window._confirmationResult.confirm(code);
+    return cred.user;
+  },
+  async signOut() {
+    if (!auth) return;
+    await auth.signOut();
+    window._confirmationResult = null;
+  },
+};
 
 // ---------- CRUD helpers (programs) ----------
 const ProgramsApi = {
@@ -288,5 +341,7 @@ const DEFAULT_PROGRAMS = [
 ];
 
 window.firebaseDb = db;
+window.firebaseAuth = auth;
 window.ProgramsApi = ProgramsApi;
+window.AuthApi = AuthApi;
 window.DEFAULT_PROGRAMS = DEFAULT_PROGRAMS;
