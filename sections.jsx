@@ -516,11 +516,7 @@ function FridgeIllustration() {
 
 // ---------- Results / Testimonials ----------
 function Results() {
-  const stories = [
-    { name: "Айгуль", age: 32, lost: "−12 кг за 4 месяца", quote: "Перестала готовить вечером — теперь это время с детьми. И минус 12 кг за 4 месяца, без срывов.", plan: "Похудение, 4 мес." },
-    { name: "Эрлан", age: 28, lost: "+6 кг мышц", quote: "Тренер расписал калораж, SixBox привозит ровно то, что нужно. Силовые выросли, перестал считать в приложениях.", plan: "Набор массы, 6 мес." },
-    { name: "Бегайым", age: 41, lost: "−8 кг и кожа", quote: "Удивил эффект на коже и волосах. Это не диета, это просто сбалансированно.", plan: "Поддержание, 1 год" },
-  ];
+  const { items: stories } = (typeof useCollection === "function") ? useCollection("TestimonialsApi", "DEFAULT_TESTIMONIALS") : { items: window.DEFAULT_TESTIMONIALS || [] };
   return (
     <section className="section" style={{ background: "var(--green-900)", color: "#fff" }}>
       <div className="container">
@@ -658,14 +654,7 @@ function Team() {
 // ---------- FAQ ----------
 function FAQ() {
   const [open, setOpen] = useStateS(0);
-  const items = [
-    { q: "Можно ли заказать только на один день?", a: "Да, есть пробный день за 765 сом со скидкой 10%. Это полноценные 5 приёмов пищи на ваш выбранный план." },
-    { q: "Как происходит доставка?", a: "Привозим утром (06:00–09:00) свежий бокс на день — или вечером (19:00–22:00) на следующий день. Курьер не звонит, оставляет у двери, пишет в WhatsApp." },
-    { q: "Что если у меня аллергия или непереносимость?", a: "Мы заменяем продукты в рамках КБЖУ. Аллергены отмечаем в карточке каждого блюда. При сложных диетах — индивидуальный план с диетологом." },
-    { q: "Можно ли пропустить день или поставить на паузу?", a: "Да, в личном кабинете. Пропущенные дни добавляются к концу подписки или возвращаются на баланс." },
-    { q: "Как оплачивается заказ?", a: "Картой онлайн, через Optima/MBank, либо переводом по реквизитам. Для подписок 1+ месяцев — рассрочка 0% от партнёрских банков." },
-    { q: "Куда вы доставляете в Бишкеке?", a: "По всему городу в пределах объездной. За пределами — стоимость рассчитывается отдельно." },
-  ];
+  const { items } = (typeof useCollection === "function") ? useCollection("FaqApi", "DEFAULT_FAQ") : { items: window.DEFAULT_FAQ || [] };
   return (
     <section className="section" id="faq" style={{ background: "var(--paper)" }}>
       <div className="container-tight">
@@ -707,6 +696,7 @@ function FAQ() {
 
 // ---------- CTA / Form ----------
 function Contact() {
+  const settings = (typeof useSiteSettings === "function") ? useSiteSettings() : (window.DEFAULT_SETTINGS || {});
   return (
     <section className="section" style={{ background: "var(--green-700)", color: "#fff", position: "relative", overflow: "hidden" }}>
       <div style={{
@@ -726,9 +716,9 @@ function Contact() {
             </p>
             <div style={{ marginTop: 36, display: "flex", flexDirection: "column", gap: 14 }}>
               {[
-                { i: Icons.phone, t: "+996 555 612 612", s: "Каждый день, 8:00 — 22:00" },
+                { i: Icons.phone, t: settings.phone || "—", s: settings.workingHours || "" },
                 { i: Icons.whats, t: "WhatsApp", s: "Отвечаем за 5 минут" },
-                { i: Icons.pin, t: "Бишкек, ул. Ибраимова 115", s: "Кухня и пункт самовывоза" },
+                { i: Icons.pin, t: settings.address || "—", s: "Кухня и пункт самовывоза" },
               ].map(c => (
                 <div key={c.t} style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,.08)", display: "grid", placeItems: "center" }}>{c.i}</div>

@@ -7,6 +7,7 @@ const { useState: useStateP, useMemo: useMemoP } = React;
 function MenuPage() {
   const [filter, setFilter] = useStateP("all");
   const [day, setDay] = useStateP(0);
+  const { items: allMeals } = (typeof useCollection === "function") ? useCollection("MealsApi", "DEFAULT_MEALS") : { items: window.DEFAULT_MEALS || [] };
 
   const days = [
     { id: 0, label: "Пн", date: "4 мая" },
@@ -16,21 +17,6 @@ function MenuPage() {
     { id: 4, label: "Пт", date: "8 мая" },
     { id: 5, label: "Сб", date: "9 мая" },
     { id: 6, label: "Вс", date: "10 мая" },
-  ];
-
-  const allMeals = [
-    { type: "Завтрак", title: "Овсянка с ягодами и миндалём", kcal: 320, p: 12, f: 8, c: 52, kind: "oats", tag: "loss" },
-    { type: "Завтрак", title: "Сырники с творогом 5%", kcal: 290, p: 22, f: 6, c: 38, kind: "dessert", tag: "balance" },
-    { type: "Завтрак", title: "Гранола с йогуртом и манго", kcal: 380, p: 14, f: 10, c: 60, kind: "oats", tag: "gain" },
-    { type: "Перекус", title: "Протеиновый смузи манго‑шпинат", kcal: 220, p: 24, f: 4, c: 24, kind: "smoothie", tag: "balance" },
-    { type: "Перекус", title: "Хумус с овощным пико", kcal: 180, p: 8, f: 9, c: 18, kind: "salad", tag: "loss" },
-    { type: "Обед", title: "Курица терияки с диким рисом", kcal: 480, p: 38, f: 14, c: 42, kind: "chicken-rice", tag: "balance" },
-    { type: "Обед", title: "Боул с тофу, киноа и эдамаме", kcal: 460, p: 28, f: 16, c: 48, kind: "tofu-quinoa", tag: "loss" },
-    { type: "Обед", title: "Говядина с булгуром и овощами гриль", kcal: 580, p: 42, f: 22, c: 50, kind: "beef-bowl", tag: "gain" },
-    { type: "Ужин", title: "Лосось су‑вид с киноа", kcal: 420, p: 36, f: 18, c: 28, kind: "salmon-greens", tag: "balance" },
-    { type: "Ужин", title: "Зелёный салат с креветкой", kcal: 380, p: 30, f: 14, c: 22, kind: "salad", tag: "loss" },
-    { type: "Ужин", title: "Индейка с бататом и брокколи", kcal: 540, p: 40, f: 16, c: 56, kind: "chicken-rice", tag: "gain" },
-    { type: "Десерт", title: "Чиа‑пудинг с кокосом", kcal: 180, p: 6, f: 8, c: 22, kind: "dessert", tag: "balance" },
   ];
 
   const filtered = filter === "all" ? allMeals : allMeals.filter(m => m.tag === filter);

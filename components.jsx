@@ -383,6 +383,7 @@ function FooterLink({ children, to, scroll }) {
 }
 
 function Footer() {
+  const settings = (typeof useSiteSettings === "function") ? useSiteSettings() : (window.DEFAULT_SETTINGS || {});
   const cols = [
     { t: "Сайт", l: [
       { label: "Меню недели", to: "menu" },
@@ -407,10 +408,10 @@ function Footer() {
     ]},
   ];
   const socials = [
-    { ic: Icons.insta, href: "https://instagram.com/sixbox.kg", label: "Instagram" },
-    { ic: Icons.tg, href: "https://t.me/sixbox_kg", label: "Telegram" },
-    { ic: Icons.whats, href: "https://wa.me/996555612612", label: "WhatsApp" },
-  ];
+    settings.instagram && { ic: Icons.insta, href: settings.instagram, label: "Instagram" },
+    settings.telegram  && { ic: Icons.tg,    href: settings.telegram,  label: "Telegram"  },
+    settings.whatsapp  && { ic: Icons.whats, href: settings.whatsapp,  label: "WhatsApp"  },
+  ].filter(Boolean);
   return (
     <footer style={{ background: "var(--green-900)", color: "#fff", padding: "80px 0 36px" }}>
       <div className="container">
@@ -444,19 +445,19 @@ function Footer() {
           ))}
           <div>
             <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.2em", opacity: 0.5, marginBottom: 18 }}>Связь</div>
-            <a href="tel:+996555612612" style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "#fff" }}>+996 555 612 612</a>
-            <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>Каждый день, 8:00 — 22:00</div>
-            <a href="https://maps.google.com/?q=Бишкек,+Ибраимова+115" target="_blank" rel="noopener noreferrer" style={{ marginTop: 16, padding: 12, borderRadius: 14, background: "rgba(255,255,255,.06)", display: "flex", gap: 10, alignItems: "center", color: "#fff" }}>
+            <a href={`tel:${settings.phoneTel || ""}`} style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, color: "#fff" }}>{settings.phone}</a>
+            <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>{settings.workingHours}</div>
+            <a href={`https://maps.google.com/?q=${encodeURIComponent(settings.address || "")}`} target="_blank" rel="noopener noreferrer" style={{ marginTop: 16, padding: 12, borderRadius: 14, background: "rgba(255,255,255,.06)", display: "flex", gap: 10, alignItems: "center", color: "#fff" }}>
               {Icons.pin}
               <div>
                 <div style={{ fontSize: 13 }}>Кухня SixBox</div>
-                <div style={{ fontSize: 12, opacity: 0.6 }}>Бишкек, ул. Ибраимова 115</div>
+                <div style={{ fontSize: 12, opacity: 0.6 }}>{settings.address}</div>
               </div>
             </a>
           </div>
         </div>
         <div style={{ marginTop: 60, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,.08)", display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.55 }}>
-          <div>© 2026 SixBox · perfect meals since 2017</div>
+          <div>{settings.copyright}</div>
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
             <button type="button" onClick={() => window.go?.("privacy")} style={{ background: "transparent", border: 0, color: "inherit", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Политика конфиденциальности</button>
             <button type="button" onClick={() => window.go?.("offer")} style={{ background: "transparent", border: 0, color: "inherit", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Договор оферты</button>
