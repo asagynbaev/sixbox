@@ -170,7 +170,6 @@ const NAV_LINKS = [
   { id: "menu", label: "Меню" },
   { id: "programs", label: "Программы" },
   { id: "constructor", label: "Конструктор" },
-  { id: "cart", label: "Корзина" },
   { id: "account", label: "Кабинет" },
   { id: "contacts", label: "Контакты" },
 ];
