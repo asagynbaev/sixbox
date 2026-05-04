@@ -77,6 +77,79 @@ const AuthApi = {
   },
 };
 
+// ---------- Users / profile / cart ----------
+// users/{uid} = { phone, name, createdAt, updatedAt, cart: [], subscription: null }
+const UsersApi = {
+  ref(uid) { return db && uid ? db.collection("users").doc(uid) : null; },
+
+  async ensure(user) {
+    // Create profile doc if missing. Called right after sign-in.
+    if (!user || !db) return null;
+    const r = this.ref(user.uid);
+    const snap = await r.get();
+    if (!snap.exists) {
+      await r.set({
+        phone: user.phoneNumber || null,
+        name: "",
+        cart: [],
+        subscription: null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      const fresh = await r.get();
+      return { id: fresh.id, ...fresh.data() };
+    }
+    return { id: snap.id, ...snap.data() };
+  },
+
+  watch(uid, cb) {
+    if (!db || !uid) { cb(null); return () => {}; }
+    return this.ref(uid).onSnapshot(snap => {
+      cb(snap.exists ? { id: snap.id, ...snap.data() } : null);
+    }, err => {
+      console.error("[UsersApi.watch]", err);
+      cb(null, err);
+    });
+  },
+
+  async update(uid, patch) {
+    if (!db || !uid) throw new Error("Нет uid");
+    return this.ref(uid).set({
+      ...patch,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  },
+
+  async addToCart(uid, item) {
+    if (!db || !uid) throw new Error("Нет uid");
+    return this.ref(uid).update({
+      cart: firebase.firestore.FieldValue.arrayUnion({
+        ...item,
+        _id: item._id || (Date.now() + "_" + Math.random().toString(36).slice(2, 7)),
+      }),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  },
+
+  async removeFromCart(uid, itemId) {
+    if (!db || !uid) throw new Error("Нет uid");
+    const snap = await this.ref(uid).get();
+    const cart = snap.data()?.cart || [];
+    return this.ref(uid).update({
+      cart: cart.filter(i => i._id !== itemId),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  },
+
+  async clearCart(uid) {
+    if (!db || !uid) throw new Error("Нет uid");
+    return this.ref(uid).update({
+      cart: [],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  },
+};
+
 // ---------- CRUD helpers (programs) ----------
 const ProgramsApi = {
   async list() {
@@ -352,4 +425,5 @@ window.firebaseDb = db;
 window.firebaseAuth = auth;
 window.ProgramsApi = ProgramsApi;
 window.AuthApi = AuthApi;
+window.UsersApi = UsersApi;
 window.DEFAULT_PROGRAMS = DEFAULT_PROGRAMS;

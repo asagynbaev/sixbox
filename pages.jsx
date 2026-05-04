@@ -360,89 +360,121 @@ function CartPage() {
   return (
     <>
       <Header active="cart" />
+      <AuthGate
+        title="Корзина"
+        sub="Войдите по номеру, чтобы оформить заказ — мы запомним адрес доставки и настройки."
+      >
+        <CartPageInner />
+      </AuthGate>
+      <Footer />
+    </>
+  );
+}
+
+function CartPageInner() {
+  const { user, profile, loading } = useUserProfile();
+  const items = profile?.cart || [];
+  const subtotal = items.reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
+  const fmt = (n) => Number(n).toLocaleString("ru-RU").replace(/,/g, " ");
+
+  const removeItem = async (id) => {
+    try { await window.UsersApi.removeFromCart(user.uid, id); }
+    catch (e) { window.alert("Ошибка: " + e.message); }
+  };
+
+  const clearAll = async () => {
+    if (!window.confirm("Очистить корзину?")) return;
+    try { await window.UsersApi.clearCart(user.uid); }
+    catch (e) { window.alert("Ошибка: " + e.message); }
+  };
+
+  if (loading) {
+    return (
+      <section style={{ background: "var(--paper)", padding: "60px 0", textAlign: "center", color: "var(--muted)" }}>Загружаем корзину…</section>
+    );
+  }
+
+  // Empty state
+  if (items.length === 0) {
+    return (
       <section style={{ background: "var(--paper)", padding: "40px 0 80px" }}>
         <div className="container">
           <div style={{ fontSize: 13, color: "var(--muted)" }}><span style={{ color: "var(--ink)", fontWeight: 600 }}>Корзина</span> · Оплата · Готово</div>
-          <h1 className="h-display" style={{ fontSize: 56, marginTop: 14 }}>Ваш заказ</h1>
+          <h1 className="h-display" style={{ fontSize: "clamp(36px, 5vw, 56px)", marginTop: 14 }}>Корзина пуста</h1>
 
-          <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24 }}>
-            <div>
-              {/* Subscription card */}
-              <div className="card" style={{ padding: 24, marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 16 }}>
-                  <div>
-                    <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>Подписка</div>
-                    <div className="h-title" style={{ fontSize: 26, marginTop: 8 }}>Поддержание · 1 неделя</div>
-                    <div style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>1850 ккал/день · 5 приёмов · доставка утром</div>
-                  </div>
-                  <button className="btn btn-ghost" style={{ padding: "10px 16px", fontSize: 13 }}>Изменить</button>
-                </div>
-                <div style={{ marginTop: 18, display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
-                  {["chicken-rice", "salmon-greens", "tofu-quinoa", "beef-bowl", "salad", "oats", "dessert"].map((k, i) => (
-                    <div key={i} style={{ width: 100, flexShrink: 0 }}>
-                      <FoodContainer kind={k} />
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6, textAlign: "center" }}>День {i + 1}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Add-ons */}
-              <div className="card" style={{ padding: 24 }}>
-                <div className="h-title" style={{ fontSize: 20 }}>Добавить к заказу</div>
-                <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-                  {[
-                    { t: "Свежий смузи", s: "+ 7 шт", p: 980 },
-                    { t: "Десерты", s: "без сахара, +7 шт", p: 750 },
-                    { t: "Орехи и снеки", s: "наборы по 100г", p: 420 },
-                  ].map(a => (
-                    <div key={a.t} style={{ padding: 16, border: "1px solid var(--line)", borderRadius: 14 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{a.t}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{a.s}</div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14 }}>
-                        <div className="h-display" style={{ fontSize: 18 }}>{a.p}<span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 4 }}>сом</span></div>
-                        <button style={{
-                          width: 32, height: 32, borderRadius: 16,
-                          background: "var(--ink)", color: "#fff",
-                          display: "grid", placeItems: "center",
-                        }}>{Icons.plus}</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="card" style={{ position: "sticky", top: 100, alignSelf: "start" }}>
-              <div style={{ padding: 24, borderBottom: "1px solid var(--line)" }}>
-                <div className="h-title" style={{ fontSize: 20 }}>Итого</div>
-              </div>
-              <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-                <SummaryRow l="Подписка 7 дней" v="6 860 сом" />
-                <SummaryRow l="Доставка" v="Бесплатно" />
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input placeholder="Промокод" style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "1px solid var(--line)", fontSize: 13, fontFamily: "inherit" }} />
-                  <button className="btn btn-dark" style={{ padding: "10px 16px", fontSize: 13 }}>Применить</button>
-                </div>
-                <SummaryRow l="Промокод START10" v="−686 сом" accent />
-                <div style={{ borderTop: "1px dashed var(--line)", paddingTop: 14, marginTop: 4 }}>
-                  <SummaryRow l="К оплате" v="6 174 сом" big />
-                </div>
-                <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: 16, marginTop: 8 }}>
-                  Перейти к оплате
-                  {Icons.arrow}
-                </button>
-                <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
-                  Защищённая оплата · 256‑bit SSL
-                </div>
-              </div>
+          <div className="card" style={{ marginTop: 32, padding: 40, textAlign: "center", background: "var(--cream)" }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: 36,
+              background: "var(--green-700)", color: "#fff",
+              display: "grid", placeItems: "center", margin: "0 auto 20px",
+            }}>{Icons.bag}</div>
+            <div className="h-title" style={{ fontSize: 22 }}>Тут пока ничего нет</div>
+            <p style={{ marginTop: 12, color: "var(--muted)", fontSize: 14, lineHeight: 1.55, maxWidth: 460, margin: "12px auto 0" }}>
+              Выберите готовую программу или соберите свой рацион в конструкторе — мы рассчитаем КБЖУ и привезём боксы по графику.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
+              <button className="btn btn-primary" onClick={() => window.go?.("programs")}>Смотреть программы {Icons.arrow}</button>
+              <button className="btn btn-ghost" onClick={() => window.go?.("constructor")}>Собрать рацион</button>
             </div>
           </div>
         </div>
       </section>
-      <Footer />
-    </>
+    );
+  }
+
+  // Has items
+  return (
+    <section style={{ background: "var(--paper)", padding: "40px 0 80px" }}>
+      <div className="container">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: 20, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 13, color: "var(--muted)" }}><span style={{ color: "var(--ink)", fontWeight: 600 }}>Корзина</span> · Оплата · Готово</div>
+            <h1 className="h-display" style={{ fontSize: "clamp(36px, 5vw, 56px)", marginTop: 14 }}>Ваш заказ</h1>
+            <div style={{ fontSize: 14, color: "var(--muted)", marginTop: 6 }}>{items.length} {items.length === 1 ? "позиция" : "позиций"}</div>
+          </div>
+          <button className="btn btn-ghost" onClick={clearAll} style={{ padding: "10px 16px" }}>Очистить корзину</button>
+        </div>
+
+        <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {items.map(it => (
+              <div key={it._id} className="card" style={{ padding: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>{it.kind || "Позиция"}</div>
+                  <div className="h-title" style={{ fontSize: 20, marginTop: 6 }}>{it.title || it.name || "Без названия"}</div>
+                  {it.subtitle && <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>{it.subtitle}</div>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div className="h-display" style={{ fontSize: 22, whiteSpace: "nowrap" }}>{fmt(it.price)} <span style={{ fontSize: 12, color: "var(--muted)" }}>сом</span></div>
+                  <button onClick={() => removeItem(it._id)} aria-label="Удалить" style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(10,18,8,.06)", color: "#c33", display: "grid", placeItems: "center" }}>{Icons.close}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Summary */}
+          <div className="card" style={{ position: "sticky", top: 100, alignSelf: "start" }}>
+            <div style={{ padding: 24, borderBottom: "1px solid var(--line)" }}>
+              <div className="h-title" style={{ fontSize: 20 }}>Итого</div>
+            </div>
+            <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+              <SummaryRow l={`Подытог · ${items.length} поз.`} v={`${fmt(subtotal)} сом`} />
+              <SummaryRow l="Доставка" v="Бесплатно" />
+              <div style={{ borderTop: "1px dashed var(--line)", paddingTop: 14, marginTop: 4 }}>
+                <SummaryRow l="К оплате" v={`${fmt(subtotal)} сом`} big />
+              </div>
+              <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: 16, marginTop: 8 }} onClick={() => window.go?.("checkout")}>
+                Перейти к оплате
+                {Icons.arrow}
+              </button>
+              <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
+                Защищённая оплата · 256‑bit SSL
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

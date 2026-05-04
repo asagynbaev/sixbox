@@ -61,7 +61,9 @@ function AuthModal({ open, onClose }) {
     setBusy(true);
     setError("");
     try {
-      await window.AuthApi.confirmCode(c);
+      const user = await window.AuthApi.confirmCode(c);
+      // Make sure the Firestore profile exists (creates on first login)
+      try { await window.UsersApi?.ensure(user); } catch (e) { console.warn("[ensure profile]", e); }
       setStep("done");
       setTimeout(onClose, 800);
     } catch (e) {
@@ -250,4 +252,43 @@ function useAuthUser() {
   return user;
 }
 
-Object.assign(window, { AuthModal, AuthRoot, useAuthUser, formatLocal, PHONE_PREFIX });
+// Hook: live user profile from Firestore (name, cart, subscription)
+function useUserProfile() {
+  const user = useAuthUser();
+  const [profile, setProfile] = useStateA(null);
+  const [loading, setLoading] = useStateA(false);
+  useEffectA(() => {
+    if (!user || !window.UsersApi) { setProfile(null); return; }
+    setLoading(true);
+    const unsub = window.UsersApi.watch(user.uid, (data) => {
+      setProfile(data);
+      setLoading(false);
+    });
+    return () => unsub && unsub();
+  }, [user?.uid]);
+  return { user, profile, loading };
+}
+
+// Helper: render an auth gate with login CTA. Use as a wrapper for protected pages.
+function AuthGate({ title = "Войдите в аккаунт", sub = "Эта страница доступна только авторизованным пользователям", children }) {
+  const user = useAuthUser();
+  if (user) return children;
+  return (
+    <section style={{ background: "var(--cream)", minHeight: "calc(100vh - 200px)", display: "grid", placeItems: "center", padding: "60px 20px" }}>
+      <div className="card" style={{ padding: 40, maxWidth: 460, width: "100%", textAlign: "center" }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 32,
+          background: "var(--green-700)", color: "#fff",
+          display: "grid", placeItems: "center", margin: "0 auto 20px",
+        }}>{Icons.user}</div>
+        <h2 className="h-display" style={{ fontSize: 28, margin: 0 }}>{title}</h2>
+        <p style={{ marginTop: 12, color: "var(--muted)", fontSize: 15, lineHeight: 1.5 }}>{sub}</p>
+        <button className="btn btn-primary" style={{ marginTop: 24, padding: "14px 24px" }} onClick={() => window.openAuth?.()}>
+          {Icons.user} Войти по номеру телефона
+        </button>
+      </div>
+    </section>
+  );
+}
+
+Object.assign(window, { AuthModal, AuthRoot, useAuthUser, useUserProfile, AuthGate, formatLocal, PHONE_PREFIX });

@@ -178,7 +178,9 @@ function Header({ light = false, active = "home", compact = false }) {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false); // user dropdown
   const isLight = light;
-  const user = (typeof useAuthUser === "function") ? useAuthUser() : null;
+  const profileBundle = (typeof useUserProfile === "function") ? useUserProfile() : { user: null, profile: null };
+  const user = profileBundle.user;
+  const cartCount = profileBundle.profile?.cart?.length || 0;
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -276,10 +278,12 @@ function Header({ light = false, active = "home", compact = false }) {
           <button className="btn btn-primary site-header-cart" style={{ padding: "10px 18px" }} onClick={() => window.go?.("cart")}>
             {Icons.bag}
             <span className="site-header-cart-label">Корзина</span>
-            <span style={{
-              background: "rgba(0,0,0,.15)", padding: "2px 7px", borderRadius: 999,
-              fontSize: 11, fontWeight: 700, marginLeft: 4,
-            }}>3</span>
+            {cartCount > 0 && (
+              <span style={{
+                background: "rgba(0,0,0,.15)", padding: "2px 7px", borderRadius: 999,
+                fontSize: 11, fontWeight: 700, marginLeft: 4,
+              }}>{cartCount}</span>
+            )}
           </button>
           <button
             type="button"

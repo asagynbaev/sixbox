@@ -10,6 +10,34 @@ const fmtSomProg = (n) => Number(n).toLocaleString("ru-RU").replace(/,/g, " ");
 // ============================================================
 function ProgramCard({ p, accent }) {
   const color = p.color || accent || "var(--lime-300)";
+  const [picked, setPicked] = useStateProg(null); // chosen price row index
+  const [adding, setAdding] = useStateProg(false);
+  const user = (typeof useAuthUser === "function") ? useAuthUser() : null;
+
+  const orderProgram = async () => {
+    const row = (p.prices || [])[picked ?? 0];
+    if (!row) { window.alert("Нет доступной цены"); return; }
+    if (!user) {
+      window.openAuth?.();
+      return;
+    }
+    setAdding(true);
+    try {
+      await window.UsersApi.addToCart(user.uid, {
+        kind: "Программа",
+        title: `${p.name} · ${row.label}`,
+        subtitle: `${p.kcalLabel || p.kcal + " ккал"} · ${row.days} дн.${row.discount ? ` · скидка ${row.discount}%` : ""}`,
+        programId: p.id,
+        days: row.days,
+        price: row.price,
+        qty: 1,
+      });
+      window.go?.("cart");
+    } catch (e) {
+      window.alert("Не удалось добавить: " + e.message);
+    }
+    setAdding(false);
+  };
   return (
     <article style={{
       background: "var(--green-900)",
@@ -65,28 +93,42 @@ function ProgramCard({ p, accent }) {
           </ul>
         </div>
 
-        <div style={{ borderTop: "1px dashed rgba(255,255,255,.12)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-          {(p.prices || []).map((row, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{row.label}</div>
-                {row.discount > 0 && (
-                  <div style={{ fontSize: 12, color, marginTop: 2 }}>со скидкой {row.discount}%</div>
-                )}
-              </div>
-              <div className="h-display" style={{ fontSize: 20, whiteSpace: "nowrap" }}>
-                {fmtSomProg(row.price)} <span style={{ fontSize: 12, opacity: 0.55, marginLeft: 2 }}>сом</span>
-              </div>
-            </div>
-          ))}
+        <div style={{ borderTop: "1px dashed rgba(255,255,255,.12)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          {(p.prices || []).map((row, i) => {
+            const active = (picked ?? 0) === i;
+            return (
+              <button
+                key={row.label + i}
+                onClick={() => setPicked(i)}
+                style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16,
+                  padding: "10px 12px", borderRadius: 12,
+                  background: active ? "rgba(255,255,255,.06)" : "transparent",
+                  border: active ? `1px solid ${color}` : "1px solid transparent",
+                  color: "inherit", textAlign: "left", fontFamily: "inherit", cursor: "pointer",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{row.label}</div>
+                  {row.discount > 0 && (
+                    <div style={{ fontSize: 12, color, marginTop: 2 }}>со скидкой {row.discount}%</div>
+                  )}
+                </div>
+                <div className="h-display" style={{ fontSize: 20, whiteSpace: "nowrap" }}>
+                  {fmtSomProg(row.price)} <span style={{ fontSize: 12, opacity: 0.55, marginLeft: 2 }}>сом</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         <button
           className="btn btn-primary"
           style={{ marginTop: "auto", width: "100%", justifyContent: "center", padding: 14 }}
-          onClick={() => window.go?.("constructor")}
+          onClick={orderProgram}
+          disabled={adding}
         >
-          Заказать {p.name} {Icons.arrow}
+          {adding ? "Добавляем…" : `Заказать ${p.name}`} {Icons.arrow}
         </button>
       </div>
     </article>

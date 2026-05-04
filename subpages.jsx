@@ -238,21 +238,115 @@ function SummaryRow({ l, v, accent, big }) {
 // ---------- Account dashboard (desktop) ----------
 function AccountDashboard() {
   return (
+    <AuthGate
+      title="Личный кабинет"
+      sub="Войдите по номеру телефона, чтобы видеть свой план, доставки и историю заказов."
+    >
+      <AccountDashboardInner />
+    </AuthGate>
+  );
+}
+
+function greetingByHour() {
+  const h = new Date().getHours();
+  if (h < 6) return "Доброй ночи";
+  if (h < 12) return "Доброе утро";
+  if (h < 18) return "Добрый день";
+  return "Добрый вечер";
+}
+
+function AccountDashboardInner() {
+  const { user, profile, loading } = useUserProfile();
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  React.useEffect(() => {
+    setNameDraft(profile?.name || "");
+  }, [profile?.name]);
+
+  const phoneShort = user?.phoneNumber
+    ? user.phoneNumber.replace(/^\+996/, "+996 ").replace(/(\d{3})(\d{3})$/, "$1 $2")
+    : "";
+  const displayName = profile?.name?.trim() || "Гость";
+  const sub = profile?.subscription;
+
+  const saveName = async () => {
+    setBusy(true);
+    try {
+      await window.UsersApi.update(user.uid, { name: nameDraft.trim() });
+      setEditingName(false);
+    } catch (e) {
+      window.alert("Не удалось сохранить: " + e.message);
+    }
+    setBusy(false);
+  };
+
+  return (
     <div style={{ background: "var(--paper)", minHeight: 800 }}>
       <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: 32 }}>
-          <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: 32, gap: 20, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
             <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>Личный кабинет</div>
-            <h1 className="h-display" style={{ fontSize: 56, marginTop: 10 }}>Доброе утро, Айгуль</h1>
-            <div style={{ fontSize: 15, color: "var(--muted)", marginTop: 8 }}>День 12 из 28 · план Поддержание · доставка утром</div>
+            <h1 className="h-display" style={{ fontSize: "clamp(34px, 5vw, 56px)", marginTop: 10 }}>
+              {greetingByHour()}, {editingName ? (
+                <input
+                  autoFocus
+                  value={nameDraft}
+                  onChange={e => setNameDraft(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") saveName();
+                    else if (e.key === "Escape") { setEditingName(false); setNameDraft(profile?.name || ""); }
+                  }}
+                  placeholder="Имя"
+                  style={{
+                    border: "2px solid var(--green-600)", borderRadius: 12, padding: "4px 10px",
+                    fontFamily: "inherit", fontSize: "inherit", fontWeight: "inherit", color: "inherit",
+                    background: "#fff", maxWidth: 280, outline: "none",
+                  }}
+                />
+              ) : (
+                <span onClick={() => setEditingName(true)} style={{ cursor: "pointer", borderBottom: "2px dashed var(--line)" }} title="Нажмите, чтобы изменить имя">{displayName}</span>
+              )}
+            </h1>
+            <div style={{ fontSize: 15, color: "var(--muted)", marginTop: 8 }}>
+              {phoneShort}
+              {sub ? ` · ${sub.programName || sub.programId} · день ${sub.currentDay}/${sub.totalDays}` : " · подписка не активна"}
+              {loading && " · загружаем…"}
+            </div>
+            {editingName && (
+              <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
+                <button className="btn btn-primary" style={{ padding: "8px 14px", fontSize: 13 }} onClick={saveName} disabled={busy}>{busy ? "Сохраняем…" : "Сохранить"}</button>
+                <button className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13 }} onClick={() => { setEditingName(false); setNameDraft(profile?.name || ""); }}>Отмена</button>
+              </div>
+            )}
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button className="btn btn-ghost">Пауза подписки</button>
-            <button className="btn btn-dark">Изменить план {Icons.arrow}</button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {sub ? (
+              <>
+                <button className="btn btn-ghost">Пауза подписки</button>
+                <button className="btn btn-dark" onClick={() => window.go?.("constructor")}>Изменить план {Icons.arrow}</button>
+              </>
+            ) : (
+              <button className="btn btn-primary" onClick={() => window.go?.("programs")}>Выбрать программу {Icons.arrow}</button>
+            )}
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
+        {!sub && (
+          <div className="card" style={{ padding: 32, textAlign: "center", marginBottom: 20, background: "var(--cream)" }}>
+            <div className="h-title" style={{ fontSize: 22 }}>Подписка ещё не оформлена</div>
+            <p style={{ marginTop: 12, color: "var(--muted)", maxWidth: 480, margin: "12px auto 0", fontSize: 14, lineHeight: 1.55 }}>
+              Выберите программу питания — мы рассчитаем КБЖУ под вашу цель и привезём бокс утром или вечером следующего дня.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
+              <button className="btn btn-primary" onClick={() => window.go?.("programs")}>Все программы {Icons.arrow}</button>
+              <button className="btn btn-ghost" onClick={() => window.go?.("constructor")}>Собрать рацион</button>
+            </div>
+          </div>
+        )}
+
+        {sub && (<div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20 }}>
           {/* Today's plan */}
           <div className="card" style={{ padding: 28 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
@@ -323,11 +417,46 @@ function AccountDashboard() {
               <div style={{ fontSize: 12, marginTop: 4, opacity: 0.7 }}>списать на следующий заказ</div>
             </div>
           </div>
+        </div>)}
+
+        {/* Quick links visible to everyone */}
+        <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <button onClick={() => window.go?.("cart")} style={{ ...quickTileStyle, background: "var(--cream)" }}>
+            {Icons.bag}
+            <div style={{ flex: 1, textAlign: "left", marginLeft: 12 }}>
+              <div style={{ fontSize: 13, color: "var(--muted)" }}>Корзина</div>
+              <div className="h-title" style={{ fontSize: 18, marginTop: 2 }}>{profile?.cart?.length || 0} {(profile?.cart?.length || 0) === 1 ? "товар" : "товаров"}</div>
+            </div>
+            {Icons.arrow}
+          </button>
+          <button onClick={() => window.go?.("contacts")} style={{ ...quickTileStyle, background: "var(--cream)" }}>
+            {Icons.phone}
+            <div style={{ flex: 1, textAlign: "left", marginLeft: 12 }}>
+              <div style={{ fontSize: 13, color: "var(--muted)" }}>Поддержка</div>
+              <div className="h-title" style={{ fontSize: 18, marginTop: 2 }}>Связаться</div>
+            </div>
+            {Icons.arrow}
+          </button>
+          <button onClick={async () => { if (window.confirm("Выйти из аккаунта?")) { await window.AuthApi.signOut(); window.go?.("home"); } }} style={{ ...quickTileStyle, background: "var(--cream)" }}>
+            {Icons.user}
+            <div style={{ flex: 1, textAlign: "left", marginLeft: 12 }}>
+              <div style={{ fontSize: 13, color: "var(--muted)" }}>Сессия</div>
+              <div className="h-title" style={{ fontSize: 18, marginTop: 2, color: "#c33" }}>Выйти</div>
+            </div>
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
+const quickTileStyle = {
+  display: "flex", alignItems: "center", gap: 4,
+  padding: 20, borderRadius: 18,
+  border: "1px solid var(--line)", background: "#fff",
+  cursor: "pointer", color: "inherit",
+  fontFamily: "inherit", textAlign: "left",
+};
 
 // ---------- Checkout ----------
 function Checkout() {
