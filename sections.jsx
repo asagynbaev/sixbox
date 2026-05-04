@@ -763,15 +763,20 @@ function Contact() {
   );
 }
 
-function Input({ label, placeholder }) {
+function Input({ label, placeholder, value, onChange }) {
   return (
     <div>
       <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{label}</div>
-      <input placeholder={placeholder} style={{
-        width: "100%", padding: "14px 16px", borderRadius: 12,
-        border: "1.5px solid var(--line)", fontSize: 15,
-        fontFamily: "inherit", outline: "none", background: "var(--paper)",
-      }} />
+      <input
+        placeholder={placeholder}
+        value={value === undefined ? undefined : value}
+        onChange={e => onChange?.(e.target.value)}
+        style={{
+          width: "100%", padding: "14px 16px", borderRadius: 12,
+          border: "1.5px solid var(--line)", fontSize: 15,
+          fontFamily: "inherit", outline: "none", background: "var(--paper)",
+        }}
+      />
     </div>
   );
 }

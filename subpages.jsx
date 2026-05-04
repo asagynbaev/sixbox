@@ -461,31 +461,110 @@ const quickTileStyle = {
 // ---------- Checkout ----------
 function Checkout() {
   return (
+    <AuthGate
+      title="Оформление заказа"
+      sub="Войдите по номеру, чтобы оформить заказ — мы запомним адрес и реквизиты."
+    >
+      <CheckoutInner />
+    </AuthGate>
+  );
+}
+
+function CheckoutInner() {
+  const { user, profile, loading } = useUserProfile();
+  const [city, setCity] = useState("Бишкек");
+  const [district, setDistrict] = useState("");
+  const [street, setStreet] = useState("");
+  const [flat, setFlat] = useState("");
+  const [comment, setComment] = useState("");
+  const [slot, setSlot] = useState("morning");
+  const [payment, setPayment] = useState("card");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(null);
+
+  const items = profile?.cart || [];
+  const subtotal = items.reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
+  const fmt = (n) => Number(n).toLocaleString("ru-RU").replace(/,/g, " ");
+
+  const submit = async () => {
+    if (!street.trim()) { window.alert("Укажите улицу и дом"); return; }
+    if (!items.length) { window.alert("Корзина пуста"); return; }
+    setBusy(true);
+    try {
+      const address = [city, district, street, flat ? `кв. ${flat}` : null].filter(Boolean).join(", ");
+      const orderId = await window.placeOrder(user, profile, {
+        address, deliverySlot: slot, payment, comment: comment.trim() || null,
+      });
+      setDone(orderId);
+    } catch (e) {
+      window.alert("Не удалось оформить: " + e.message);
+    }
+    setBusy(false);
+  };
+
+  if (loading) {
+    return <div style={{ padding: 60, textAlign: "center", color: "var(--muted)" }}>Загружаем…</div>;
+  }
+
+  if (done) {
+    return (
+      <div style={{ background: "var(--paper)", minHeight: 600, display: "grid", placeItems: "center", padding: "60px 20px" }}>
+        <div className="card" style={{ padding: 40, maxWidth: 480, textAlign: "center" }}>
+          <div style={{ width: 72, height: 72, borderRadius: 36, background: "var(--lime-300)", color: "var(--green-900)", display: "grid", placeItems: "center", margin: "0 auto 20px" }}>{Icons.check}</div>
+          <h1 className="h-display" style={{ fontSize: "clamp(28px, 4vw, 40px)" }}>Заказ оформлен</h1>
+          <p style={{ marginTop: 12, color: "var(--muted)", fontSize: 15, lineHeight: 1.5 }}>
+            Номер заказа: <b style={{ color: "var(--ink)", fontFamily: "var(--font-mono)" }}>{done.slice(0, 6).toUpperCase()}</b>
+          </p>
+          <p style={{ marginTop: 8, color: "var(--muted)", fontSize: 14, lineHeight: 1.5 }}>
+            Менеджер свяжется в течение 15 минут для подтверждения. Статус заказа можно отслеживать в кабинете.
+          </p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
+            <button className="btn btn-primary" onClick={() => window.go?.("account")}>В кабинет {Icons.arrow}</button>
+            <button className="btn btn-ghost" onClick={() => window.go?.("home")}>На главную</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div style={{ background: "var(--paper)", minHeight: 500, padding: "60px 20px", textAlign: "center" }}>
+        <div className="card" style={{ padding: 40, maxWidth: 480, margin: "0 auto" }}>
+          <div className="h-title" style={{ fontSize: 22 }}>Корзина пуста</div>
+          <p style={{ marginTop: 12, color: "var(--muted)" }}>Добавьте программу, прежде чем оформлять заказ.</p>
+          <button className="btn btn-primary" style={{ marginTop: 20 }} onClick={() => window.go?.("programs")}>К программам {Icons.arrow}</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
     <div style={{ background: "var(--paper)", minHeight: 800 }}>
       <div className="container" style={{ paddingTop: 40, paddingBottom: 80 }}>
         <div style={{ fontSize: 13, color: "var(--muted)" }}>Корзина · <span style={{ color: "var(--ink)", fontWeight: 600 }}>Оплата</span> · Готово</div>
-        <h1 className="h-display" style={{ fontSize: 56, marginTop: 14 }}>Оплата заказа</h1>
+        <h1 className="h-display" style={{ fontSize: "clamp(36px, 5vw, 56px)", marginTop: 14 }}>Оплата заказа</h1>
 
         <div style={{ marginTop: 32, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 20 }}>
           <div className="card" style={{ padding: 32 }}>
             <SectionStep n="1" title="Адрес доставки">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <Input label="Город" placeholder="Бишкек" />
-                <Input label="Район" placeholder="Свердловский" />
-                <Input label="Улица и дом" placeholder="ул. Ибраимова, 115" />
-                <Input label="Кв./офис" placeholder="42" />
+                <Input label="Город" placeholder="Бишкек" value={city} onChange={setCity} />
+                <Input label="Район" placeholder="Свердловский" value={district} onChange={setDistrict} />
+                <Input label="Улица и дом *" placeholder="ул. Ибраимова, 115" value={street} onChange={setStreet} />
+                <Input label="Кв./офис" placeholder="42" value={flat} onChange={setFlat} />
               </div>
               <div style={{ marginTop: 14 }}>
-                <Input label="Комментарий курьеру" placeholder="Звонок в домофон не работает" />
+                <Input label="Комментарий курьеру" placeholder="Звонок в домофон не работает" value={comment} onChange={setComment} />
               </div>
             </SectionStep>
 
             <SectionStep n="2" title="Когда привозить">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <button className="btn btn-ghost" style={{ padding: "16px", justifyContent: "flex-start", border: "1.5px solid var(--green-600)", color: "var(--green-700)" }}>
+                <button onClick={() => setSlot("morning")} className="btn btn-ghost" style={{ padding: "16px", justifyContent: "flex-start", border: slot === "morning" ? "1.5px solid var(--green-600)" : undefined, color: slot === "morning" ? "var(--green-700)" : "var(--ink)" }}>
                   ☀ <div style={{ textAlign: "left" }}><div style={{ fontWeight: 600 }}>Утром</div><div style={{ fontSize: 11, opacity: 0.7 }}>06:00 — 09:00</div></div>
                 </button>
-                <button className="btn btn-ghost" style={{ padding: "16px", justifyContent: "flex-start" }}>
+                <button onClick={() => setSlot("evening")} className="btn btn-ghost" style={{ padding: "16px", justifyContent: "flex-start", border: slot === "evening" ? "1.5px solid var(--green-600)" : undefined, color: slot === "evening" ? "var(--green-700)" : "var(--ink)" }}>
                   ☾ <div style={{ textAlign: "left" }}><div style={{ fontWeight: 600 }}>Вечером</div><div style={{ fontSize: 11, opacity: 0.7 }}>19:00 — 22:00</div></div>
                 </button>
               </div>
@@ -494,23 +573,23 @@ function Checkout() {
             <SectionStep n="3" title="Способ оплаты">
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                 {[
-                  { t: "Карта", s: "Visa, Mastercard, Элкарт", a: true },
-                  { t: "MBank", s: "перевод по QR" },
-                  { t: "Optima", s: "перевод по QR" },
-                ].map((p, i) => (
-                  <button key={i} className="btn btn-ghost" style={{
-                    padding: 16, flexDirection: "column", alignItems: "flex-start", gap: 4,
-                    border: p.a ? "1.5px solid var(--green-600)" : undefined,
-                    color: p.a ? "var(--green-700)" : "var(--ink)",
-                    background: p.a ? "rgba(28,194,74,.04)" : "transparent",
-                  }}>
-                    <div style={{ fontWeight: 600 }}>{p.t}</div>
-                    <div style={{ fontSize: 11, opacity: 0.7 }}>{p.s}</div>
-                  </button>
-                ))}
-              </div>
-              <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: "rgba(255,138,31,.08)", border: "1px dashed rgba(255,138,31,.3)", fontSize: 13, color: "var(--orange-600)" }}>
-                Доступна рассрочка 0% от MBank на подписки от 1 месяца
+                  { id: "card",   t: "Карта", s: "Visa, Mastercard, Элкарт" },
+                  { id: "mbank",  t: "MBank", s: "перевод по QR" },
+                  { id: "optima", t: "Optima", s: "перевод по QR" },
+                ].map(p => {
+                  const active = payment === p.id;
+                  return (
+                    <button key={p.id} onClick={() => setPayment(p.id)} className="btn btn-ghost" style={{
+                      padding: 16, flexDirection: "column", alignItems: "flex-start", gap: 4,
+                      border: active ? "1.5px solid var(--green-600)" : undefined,
+                      color: active ? "var(--green-700)" : "var(--ink)",
+                      background: active ? "rgba(28,194,74,.04)" : "transparent",
+                    }}>
+                      <div style={{ fontWeight: 600 }}>{p.t}</div>
+                      <div style={{ fontSize: 11, opacity: 0.7 }}>{p.s}</div>
+                    </button>
+                  );
+                })}
               </div>
             </SectionStep>
           </div>
@@ -520,24 +599,25 @@ function Checkout() {
             <div style={{ padding: 24, borderBottom: "1px solid var(--line)" }}>
               <div className="h-title" style={{ fontSize: 20 }}>Ваш заказ</div>
             </div>
-            <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 14 }}>
-              <SummaryRow l="План Поддержание" v="1 неделя" />
-              <SummaryRow l="Калории" v="1850 ккал/день" />
-              <SummaryRow l="Боксов в день" v="5 приёмов" />
-              <SummaryRow l="Доставка" v="Утром, 7 дней" />
+            <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+              {items.map(it => (
+                <div key={it._id} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13 }}>
+                  <div style={{ minWidth: 0, color: "var(--ink)" }}>{it.title || it.name}</div>
+                  <div style={{ whiteSpace: "nowrap", fontWeight: 600 }}>{fmt(it.price)} сом</div>
+                </div>
+              ))}
               <div style={{ borderTop: "1px dashed var(--line)", marginTop: 4, paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-                <SummaryRow l="Тариф" v="6 860 сом" />
+                <SummaryRow l="Подытог" v={`${fmt(subtotal)} сом`} />
                 <SummaryRow l="Доставка" v="Бесплатно" />
-                <SummaryRow l="Промокод START10" v="−686 сом" accent />
               </div>
               <div style={{ borderTop: "1px solid var(--line)", marginTop: 4, paddingTop: 14 }}>
-                <SummaryRow l="К оплате" v="6 174 сом" big />
+                <SummaryRow l="К оплате" v={`${fmt(subtotal)} сом`} big />
               </div>
             </div>
             <div style={{ padding: 24, paddingTop: 0 }}>
-              <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: 18 }}>
-                Оплатить 6 174 сом
-                {Icons.arrow}
+              <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: 18 }} onClick={submit} disabled={busy}>
+                {busy ? "Оформляем…" : `Оплатить ${fmt(subtotal)} сом`}
+                {!busy && Icons.arrow}
               </button>
               <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", marginTop: 10 }}>
                 Защищённая оплата · 256‑bit SSL

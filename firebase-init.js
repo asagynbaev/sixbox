@@ -152,17 +152,17 @@ const UsersApi = {
 };
 
 // ---------- Generic CRUD factory ----------
-function makeApi(collectionName, orderField = "order") {
+function makeApi(collectionName, orderField = "order", direction = "asc") {
   return {
     collection: collectionName,
     async list() {
       if (!db) return [];
-      const snap = await db.collection(collectionName).orderBy(orderField, "asc").get();
+      const snap = await db.collection(collectionName).orderBy(orderField, direction).get();
       return snap.docs.map(d => ({ id: d.id, ...d.data() }));
     },
     watch(cb) {
       if (!db) return () => {};
-      return db.collection(collectionName).orderBy(orderField, "asc").onSnapshot(snap => {
+      return db.collection(collectionName).orderBy(orderField, direction).onSnapshot(snap => {
         cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, err => {
         console.error(`[${collectionName}.watch]`, err);
@@ -209,6 +209,55 @@ const MealsApi        = makeApi("meals");
 const FaqApi          = makeApi("faq");
 const TestimonialsApi = makeApi("testimonials");
 const PostsApi        = makeApi("posts");
+const OrdersApi       = makeApi("orders", "createdAt", "desc");
+
+// Admin view of users (reads whole collection)
+const UsersAdminApi = {
+  collection: "users",
+  watch(cb) {
+    if (!db) { cb(null); return () => {}; }
+    return db.collection("users").orderBy("createdAt", "desc").onSnapshot(snap => {
+      cb(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, err => {
+      console.error("[users.watchAll]", err);
+      cb(null, err);
+    });
+  },
+  async remove(uid) {
+    if (!db) throw new Error("Firebase не инициализирован");
+    return db.collection("users").doc(uid).delete();
+  },
+};
+
+// Convenience: place an order from current cart, then clear the cart.
+async function placeOrder(user, profile, formData) {
+  if (!db) throw new Error("Firebase не инициализирован");
+  if (!user || !user.uid) throw new Error("Не авторизован");
+  const items = (profile && profile.cart) || [];
+  if (!items.length) throw new Error("Корзина пуста");
+  const subtotal = items.reduce((s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
+  const orderRef = await db.collection("orders").add({
+    userId: user.uid,
+    userPhone: user.phoneNumber || (profile && profile.phone) || null,
+    userName: (profile && profile.name) || null,
+    items,
+    subtotal,
+    delivery: 0,
+    total: subtotal,
+    address: formData.address || null,
+    deliverySlot: formData.deliverySlot || "morning",
+    comment: formData.comment || null,
+    payment: formData.payment || "card",
+    status: "new", // new | processing | delivered | cancelled
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  // Clear cart after placing the order
+  await db.collection("users").doc(user.uid).set({
+    cart: [],
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return orderRef.id;
+}
 
 // Settings is a single doc, not a collection
 const SettingsApi = {
@@ -514,16 +563,72 @@ const DEFAULT_SETTINGS = {
   copyright: "© 2026 SixBox · perfect meals since 2017",
 };
 
+// ---------- Auto-seed: populate empty collections with defaults on first load ----------
+async function seedAllIfEmpty({ force = false } = {}) {
+  if (!db) return { ok: false, reason: "no db" };
+  const sets = [
+    { api: ProgramsApi,     defaults: DEFAULT_PROGRAMS,     name: "programs" },
+    { api: MealsApi,        defaults: DEFAULT_MEALS,        name: "meals" },
+    { api: FaqApi,          defaults: DEFAULT_FAQ,          name: "faq" },
+    { api: TestimonialsApi, defaults: DEFAULT_TESTIMONIALS, name: "testimonials" },
+    { api: PostsApi,        defaults: DEFAULT_POSTS,        name: "posts" },
+  ];
+  const report = {};
+  for (const s of sets) {
+    try {
+      const list = await s.api.list();
+      if (force || list.length === 0) {
+        await s.api.seed(s.defaults);
+        report[s.name] = `seeded ${s.defaults.length}`;
+      } else {
+        report[s.name] = `skipped (has ${list.length})`;
+      }
+    } catch (e) {
+      report[s.name] = `error: ${e.message}`;
+      console.warn(`[seed ${s.name}]`, e);
+    }
+  }
+  // Settings is a single doc
+  try {
+    const cur = await SettingsApi.get();
+    if (force || !cur) {
+      await SettingsApi.seed(DEFAULT_SETTINGS);
+      report.settings = "seeded";
+    } else {
+      report.settings = "skipped (exists)";
+    }
+  } catch (e) {
+    report.settings = `error: ${e.message}`;
+    console.warn("[seed settings]", e);
+  }
+  return { ok: true, report };
+}
+
+// Run once on first load — non-blocking. Idempotent: only seeds empty collections.
+// Skip if rules block reads/writes — failures are logged but don't break the app.
+if (db) {
+  // Defer slightly to let the rest of the app boot first
+  setTimeout(() => {
+    seedAllIfEmpty().then(r => {
+      if (r?.report) console.log("[auto-seed]", r.report);
+    }).catch(e => console.warn("[auto-seed]", e));
+  }, 800);
+}
+
 window.firebaseDb = db;
 window.firebaseAuth = auth;
+window.seedAllIfEmpty = seedAllIfEmpty;
 window.ProgramsApi = ProgramsApi;
 window.MealsApi = MealsApi;
 window.FaqApi = FaqApi;
 window.TestimonialsApi = TestimonialsApi;
 window.PostsApi = PostsApi;
+window.OrdersApi = OrdersApi;
+window.UsersAdminApi = UsersAdminApi;
 window.SettingsApi = SettingsApi;
 window.AuthApi = AuthApi;
 window.UsersApi = UsersApi;
+window.placeOrder = placeOrder;
 window.DEFAULT_PROGRAMS = DEFAULT_PROGRAMS;
 window.DEFAULT_MEALS = DEFAULT_MEALS;
 window.DEFAULT_FAQ = DEFAULT_FAQ;

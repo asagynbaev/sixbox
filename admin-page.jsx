@@ -222,12 +222,34 @@ function AdminPage() {
 // ============================================================
 // DASHBOARD with TABS
 // ============================================================
-const TABS = ["programs", "meals", "faq", "testimonials", "posts", "settings"];
+const TABS = ["orders", "users", "programs", "meals", "faq", "testimonials", "posts", "settings"];
+const TAB_LABELS = {
+  orders: "Заказы",
+  users: "Пользователи",
+  settings: "Настройки",
+};
 
 function AdminDashboard({ onLogout }) {
-  const [tab, setTab] = useStateAd(() => sessionStorage.getItem("sixbox_admin_tab") || "programs");
+  const [tab, setTab] = useStateAd(() => sessionStorage.getItem("sixbox_admin_tab") || "orders");
+  const [seeding, setSeeding] = useStateAd(false);
 
   useEffectAd(() => { sessionStorage.setItem("sixbox_admin_tab", tab); }, [tab]);
+
+  const seedAll = async (force) => {
+    const msg = force
+      ? "Перезалить ВСЕ дефолтные данные? Записи с теми же id будут перезаписаны (ваши правки могут потеряться)."
+      : "Залить дефолт только в пустые коллекции? Существующий контент не тронется.";
+    if (!window.confirm(msg)) return;
+    setSeeding(true);
+    try {
+      const r = await window.seedAllIfEmpty({ force: !!force });
+      const lines = Object.entries(r.report || {}).map(([k, v]) => `${k}: ${v}`).join("\n");
+      window.alert("Готово.\n\n" + lines);
+    } catch (e) {
+      window.alert("Ошибка: " + e.message);
+    }
+    setSeeding(false);
+  };
 
   return (
     <>
@@ -239,7 +261,15 @@ function AdminDashboard({ onLogout }) {
               <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>Админка</div>
               <h1 className="h-display" style={{ fontSize: "clamp(28px, 4vw, 44px)", marginTop: 6 }}>Управление контентом</h1>
             </div>
-            <button className="btn btn-ghost" onClick={onLogout}>Выйти</button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button className="btn btn-ghost" onClick={() => seedAll(false)} disabled={seeding}>
+                {seeding ? "Заливаем…" : "Залить дефолт в пустые"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => seedAll(true)} disabled={seeding} style={{ color: "#c33" }}>
+                Перезалить всё
+              </button>
+              <button className="btn btn-ghost" onClick={onLogout}>Выйти</button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -255,12 +285,15 @@ function AdminDashboard({ onLogout }) {
                   whiteSpace: "nowrap", flexShrink: 0,
                 }}
               >
-                {t === "settings" ? "Настройки" : SCHEMAS[t].label}
+                {TAB_LABELS[t] || SCHEMAS[t].label}
               </button>
             ))}
           </div>
 
-          {tab === "settings" ? <SettingsEditor /> : <ResourceManager schema={SCHEMAS[tab]} resourceKey={tab} />}
+          {tab === "settings" && <SettingsEditor />}
+          {tab === "orders" && <OrdersPanel />}
+          {tab === "users" && <UsersPanel />}
+          {!["settings", "orders", "users"].includes(tab) && <ResourceManager schema={SCHEMAS[tab]} resourceKey={tab} />}
         </div>
       </section>
       <Footer />
@@ -533,8 +566,8 @@ function ResourceEditor({ schema, api, initial, onClose }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(7,38,15,.6)", display: "grid", placeItems: "center", padding: 16, overflow: "auto" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 22, maxWidth: 720, width: "100%", maxHeight: "calc(100vh - 32px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div onClick={onClose} className="admin-editor-overlay" style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(7,38,15,.6)", display: "grid", placeItems: "center", padding: 16, overflow: "auto" }}>
+      <div onClick={e => e.stopPropagation()} className="admin-editor" style={{ background: "#fff", borderRadius: 22, maxWidth: 720, width: "100%", maxHeight: "calc(100vh - 32px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
           <div>
             <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>{isNew ? "Новая запись" : "Редактирование"}</div>
@@ -679,4 +712,336 @@ function useCollection(apiName, defaultsKey) {
   return { items, loaded };
 }
 
-Object.assign(window, { AdminPage, useSiteSettings, useCollection });
+// ============================================================
+// ORDERS PANEL
+// ============================================================
+const STATUS_LABELS = {
+  new:        { l: "Новый",      bg: "var(--lime-300)",   c: "var(--green-900)" },
+  processing: { l: "В работе",   bg: "var(--orange-500)", c: "#1a0a00" },
+  delivered:  { l: "Доставлен",  bg: "var(--green-600)",  c: "#fff" },
+  cancelled:  { l: "Отменён",    bg: "#fee2e2",           c: "#a00" },
+};
+
+const fmtSom = (n) => Number(n || 0).toLocaleString("ru-RU").replace(/,/g, " ") + " сом";
+const fmtDate = (ts) => {
+  if (!ts) return "—";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+};
+
+function OrdersPanel() {
+  const [orders, setOrders] = useStateAd([]);
+  const [loading, setLoading] = useStateAd(true);
+  const [error, setError] = useStateAd(null);
+  const [view, setView] = useStateAd(null);
+  const [filter, setFilter] = useStateAd("all");
+
+  useEffectAd(() => {
+    if (!window.OrdersApi) { setError("OrdersApi не доступен"); setLoading(false); return; }
+    const unsub = window.OrdersApi.watch((data, err) => {
+      if (err) { setError(err.message || String(err)); setLoading(false); return; }
+      setOrders(data || []);
+      setLoading(false);
+    });
+    return () => unsub && unsub();
+  }, []);
+
+  const setStatus = async (id, status) => {
+    try { await window.OrdersApi.update(id, { status }); }
+    catch (e) { window.alert("Ошибка: " + e.message); }
+  };
+
+  const removeOrder = async (id) => {
+    if (!window.confirm("Удалить заказ безвозвратно?")) return;
+    try { await window.OrdersApi.remove(id); }
+    catch (e) { window.alert("Ошибка: " + e.message); }
+  };
+
+  const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
+  const counts = orders.reduce((acc, o) => ({ ...acc, [o.status]: (acc[o.status] || 0) + 1 }), {});
+
+  return (
+    <>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>Все · {orders.length}</FilterChip>
+        {Object.entries(STATUS_LABELS).map(([k, v]) => (
+          <FilterChip key={k} active={filter === k} onClick={() => setFilter(k)}>
+            {v.l} · {counts[k] || 0}
+          </FilterChip>
+        ))}
+      </div>
+
+      {loading && <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Загружаем заказы…</div>}
+      {error && (
+        <div className="card" style={{ padding: 24, background: "#fff5f5", borderColor: "#ffd0d0", color: "#a00" }}>
+          <div className="h-title" style={{ fontSize: 18 }}>Ошибка Firestore</div>
+          <p style={{ marginTop: 8, fontSize: 14 }}>{error}</p>
+          <p style={{ marginTop: 8, fontSize: 13, color: "var(--muted)" }}>
+            Открой Firebase Console → Firestore → Rules и разреши read/write для коллекции <code>orders</code>.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && filtered.length === 0 && (
+        <div className="card" style={{ padding: 40, textAlign: "center" }}>
+          <div className="h-title" style={{ fontSize: 22 }}>Заказов нет</div>
+          <p style={{ marginTop: 12, color: "var(--muted)" }}>Заказы появятся здесь автоматически после оформления через корзину.</p>
+        </div>
+      )}
+
+      {!loading && !error && filtered.length > 0 && (
+        <div className="card" style={{ overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, minWidth: 760 }}>
+            <thead>
+              <tr style={{ background: "var(--cream)", textAlign: "left" }}>
+                <th style={thStyleAd}>Дата</th>
+                <th style={thStyleAd}>Клиент</th>
+                <th style={thStyleAd}>Позиций</th>
+                <th style={thStyleAd}>Сумма</th>
+                <th style={thStyleAd}>Статус</th>
+                <th style={thStyleAd}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(o => (
+                <tr key={o.id} style={{ borderTop: "1px solid var(--line)" }}>
+                  <td style={{ ...tdStyleAd, fontFamily: "var(--font-mono)", fontSize: 12 }}>{fmtDate(o.createdAt)}</td>
+                  <td style={tdStyleAd}>
+                    <div style={{ fontWeight: 600 }}>{o.userName || "—"}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)" }}>{o.userPhone || o.userId}</div>
+                  </td>
+                  <td style={tdStyleAd}>{(o.items || []).length}</td>
+                  <td style={{ ...tdStyleAd, fontWeight: 600 }}>{fmtSom(o.total)}</td>
+                  <td style={tdStyleAd}>
+                    <select value={o.status || "new"} onChange={e => setStatus(o.id, e.target.value)} style={{ ...inputStyleAd, padding: "6px 10px", fontSize: 13, width: "auto", background: STATUS_LABELS[o.status]?.bg || "#eee", color: STATUS_LABELS[o.status]?.c || "var(--ink)", fontWeight: 600 }}>
+                      {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.l}</option>)}
+                    </select>
+                  </td>
+                  <td style={{ ...tdStyleAd, textAlign: "right", whiteSpace: "nowrap" }}>
+                    <button className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13 }} onClick={() => setView(o)}>Открыть</button>
+                    <button className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13, marginLeft: 6, color: "#c33" }} onClick={() => removeOrder(o.id)}>Удалить</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {view && <OrderViewer order={view} onClose={() => setView(null)} onChangeStatus={(s) => { setStatus(view.id, s); setView({ ...view, status: s }); }} />}
+    </>
+  );
+}
+
+function OrderViewer({ order, onClose, onChangeStatus }) {
+  return (
+    <div onClick={onClose} className="admin-editor-overlay" style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(7,38,15,.6)", display: "grid", placeItems: "center", padding: 16, overflow: "auto" }}>
+      <div onClick={e => e.stopPropagation()} className="admin-editor" style={{ background: "#fff", borderRadius: 22, maxWidth: 640, width: "100%", maxHeight: "calc(100vh - 32px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+          <div>
+            <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>Заказ {order.id.slice(0, 6)}</div>
+            <div className="h-title" style={{ fontSize: 22, marginTop: 6 }}>{order.userName || "—"} · {fmtSom(order.total)}</div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>{order.userPhone} · {fmtDate(order.createdAt)}</div>
+          </div>
+          <button onClick={onClose} aria-label="Закрыть" style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center" }}>{Icons.close}</button>
+        </div>
+        <div style={{ padding: 24, overflow: "auto", display: "flex", flexDirection: "column", gap: 18 }}>
+          <FieldAd label="Статус">
+            <select value={order.status || "new"} onChange={e => onChangeStatus(e.target.value)} style={inputStyleAd}>
+              {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v.l}</option>)}
+            </select>
+          </FieldAd>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8 }}>Позиции ({(order.items || []).length})</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {(order.items || []).map((it, i) => (
+                <div key={it._id || i} style={{ padding: 14, borderRadius: 12, border: "1px solid var(--line)", background: "var(--paper)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, color: "var(--muted)" }}>{it.kind || "Позиция"}</div>
+                      <div style={{ fontWeight: 600, marginTop: 2 }}>{it.title || it.name || "—"}</div>
+                      {it.subtitle && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{it.subtitle}</div>}
+                    </div>
+                    <div style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{fmtSom(it.price)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <FieldAd label="Адрес доставки">
+              <div style={{ ...inputStyleAd, background: "var(--paper)" }}>{order.address || "—"}</div>
+            </FieldAd>
+            <FieldAd label="Слот доставки">
+              <div style={{ ...inputStyleAd, background: "var(--paper)" }}>{order.deliverySlot === "evening" ? "Вечером" : "Утром"}</div>
+            </FieldAd>
+            <FieldAd label="Способ оплаты">
+              <div style={{ ...inputStyleAd, background: "var(--paper)" }}>{order.payment || "—"}</div>
+            </FieldAd>
+            <FieldAd label="Сумма">
+              <div style={{ ...inputStyleAd, background: "var(--paper)", fontWeight: 600 }}>{fmtSom(order.total)}</div>
+            </FieldAd>
+          </div>
+          {order.comment && (
+            <FieldAd label="Комментарий клиента">
+              <div style={{ ...inputStyleAd, background: "var(--paper)", whiteSpace: "pre-wrap" }}>{order.comment}</div>
+            </FieldAd>
+          )}
+        </div>
+        <div style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--cream)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button className="btn btn-primary" onClick={onClose}>Закрыть</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// USERS PANEL
+// ============================================================
+function UsersPanel() {
+  const [users, setUsers] = useStateAd([]);
+  const [loading, setLoading] = useStateAd(true);
+  const [error, setError] = useStateAd(null);
+  const [view, setView] = useStateAd(null);
+
+  useEffectAd(() => {
+    if (!window.UsersAdminApi) { setError("UsersAdminApi не доступен"); setLoading(false); return; }
+    const unsub = window.UsersAdminApi.watch((data, err) => {
+      if (err) { setError(err.message || String(err)); setLoading(false); return; }
+      setUsers(data || []);
+      setLoading(false);
+    });
+    return () => unsub && unsub();
+  }, []);
+
+  const removeUser = async (uid, label) => {
+    if (!window.confirm(`Удалить профиль ${label}? Аккаунт в Firebase Auth не удалится — только профиль в Firestore.`)) return;
+    try { await window.UsersAdminApi.remove(uid); }
+    catch (e) { window.alert("Ошибка: " + e.message); }
+  };
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 14, color: "var(--muted)" }}>Всего: {users.length}</div>
+        <div style={{ fontSize: 12, color: "var(--muted)" }}>Только пользователи, у которых есть профиль в Firestore (создаётся при первом заходе после входа)</div>
+      </div>
+
+      {loading && <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Загружаем…</div>}
+      {error && (
+        <div className="card" style={{ padding: 24, background: "#fff5f5", borderColor: "#ffd0d0", color: "#a00" }}>
+          <div className="h-title" style={{ fontSize: 18 }}>Ошибка Firestore</div>
+          <p style={{ marginTop: 8, fontSize: 14 }}>{error}</p>
+          <p style={{ marginTop: 8, fontSize: 13, color: "var(--muted)" }}>
+            В правилах Firestore нужен open-read для коллекции <code>users</code> (или специальный admin-claim). Для прототипа добавь:
+          </p>
+          <pre style={{ fontSize: 12, marginTop: 8, background: "#fff", padding: 12, borderRadius: 8, overflow: "auto" }}>{`match /users/{uid} {
+  allow read: if true;
+  allow write: if request.auth != null && request.auth.uid == uid;
+}`}</pre>
+        </div>
+      )}
+
+      {!loading && !error && users.length === 0 && (
+        <div className="card" style={{ padding: 40, textAlign: "center" }}>
+          <div className="h-title" style={{ fontSize: 22 }}>Пользователей пока нет</div>
+          <p style={{ marginTop: 12, color: "var(--muted)" }}>Зарегистрированные через SMS юзеры появятся здесь, когда зайдут в кабинет/корзину.</p>
+        </div>
+      )}
+
+      {!loading && !error && users.length > 0 && (
+        <div className="card" style={{ overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, minWidth: 720 }}>
+            <thead>
+              <tr style={{ background: "var(--cream)", textAlign: "left" }}>
+                <th style={thStyleAd}>Телефон</th>
+                <th style={thStyleAd}>Имя</th>
+                <th style={thStyleAd}>В корзине</th>
+                <th style={thStyleAd}>Подписка</th>
+                <th style={thStyleAd}>Зарегистрирован</th>
+                <th style={thStyleAd}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u.id} style={{ borderTop: "1px solid var(--line)" }}>
+                  <td style={{ ...tdStyleAd, fontFamily: "var(--font-mono)", fontSize: 13 }}>{u.phone || "—"}</td>
+                  <td style={tdStyleAd}><div style={{ fontWeight: 600 }}>{u.name || <span style={{ color: "var(--muted)" }}>Гость</span>}</div></td>
+                  <td style={tdStyleAd}>{(u.cart || []).length}</td>
+                  <td style={tdStyleAd}>{u.subscription ? "Активна" : <span style={{ color: "var(--muted)" }}>Нет</span>}</td>
+                  <td style={{ ...tdStyleAd, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)" }}>{fmtDate(u.createdAt)}</td>
+                  <td style={{ ...tdStyleAd, textAlign: "right", whiteSpace: "nowrap" }}>
+                    <button className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13 }} onClick={() => setView(u)}>Открыть</button>
+                    <button className="btn btn-ghost" style={{ padding: "8px 14px", fontSize: 13, marginLeft: 6, color: "#c33" }} onClick={() => removeUser(u.id, u.phone || u.id)}>Удалить</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {view && <UserViewer user={view} onClose={() => setView(null)} />}
+    </>
+  );
+}
+
+function UserViewer({ user, onClose }) {
+  return (
+    <div onClick={onClose} className="admin-editor-overlay" style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(7,38,15,.6)", display: "grid", placeItems: "center", padding: 16, overflow: "auto" }}>
+      <div onClick={e => e.stopPropagation()} className="admin-editor" style={{ background: "#fff", borderRadius: 22, maxWidth: 540, width: "100%", maxHeight: "calc(100vh - 32px)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+          <div>
+            <div className="h-eyebrow" style={{ color: "var(--green-700)" }}>Профиль</div>
+            <div className="h-title" style={{ fontSize: 22, marginTop: 6 }}>{user.name || "Гость"}</div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>{user.phone}</div>
+          </div>
+          <button onClick={onClose} aria-label="Закрыть" style={{ width: 36, height: 36, borderRadius: 10, display: "grid", placeItems: "center" }}>{Icons.close}</button>
+        </div>
+        <div style={{ padding: 24, overflow: "auto", display: "flex", flexDirection: "column", gap: 18 }}>
+          <FieldAd label="UID">
+            <div style={{ ...inputStyleAd, background: "var(--paper)", fontFamily: "var(--font-mono)", fontSize: 12 }}>{user.id}</div>
+          </FieldAd>
+          <FieldAd label="Зарегистрирован">
+            <div style={{ ...inputStyleAd, background: "var(--paper)" }}>{fmtDate(user.createdAt)}</div>
+          </FieldAd>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--muted)", marginBottom: 8 }}>Корзина ({(user.cart || []).length})</div>
+            {(user.cart || []).length === 0 ? (
+              <div style={{ ...inputStyleAd, background: "var(--paper)", color: "var(--muted)" }}>Пусто</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(user.cart || []).map((it, i) => (
+                  <div key={it._id || i} style={{ padding: 12, borderRadius: 10, border: "1px solid var(--line)", background: "var(--paper)", display: "flex", justifyContent: "space-between", gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{it.title || it.name || "—"}</div>
+                      {it.subtitle && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{it.subtitle}</div>}
+                    </div>
+                    <div style={{ fontWeight: 600, fontSize: 14, whiteSpace: "nowrap" }}>{fmtSom(it.price)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ padding: "14px 24px", borderTop: "1px solid var(--line)", background: "var(--cream)", display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <button className="btn btn-primary" onClick={onClose}>Закрыть</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({ active, onClick, children }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: "8px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600,
+      background: active ? "var(--ink)" : "rgba(10,18,8,.06)",
+      color: active ? "#fff" : "var(--ink)",
+      cursor: "pointer", border: 0, fontFamily: "inherit",
+    }}>{children}</button>
+  );
+}
+
+Object.assign(window, { AdminPage, OrdersPanel, UsersPanel, useSiteSettings, useCollection });
