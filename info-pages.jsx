@@ -1,14 +1,16 @@
 /* SixBox — secondary info pages: Blog, About, Kitchen, Careers, Partners, Delivery, Allergens, Legal */
 
 // ---------- Shared building blocks ----------
-function PageHero({ eyebrow, title, sub, accent = "var(--green-700)", bg = "var(--cream)", color = "var(--ink)" }) {
+function PageHero({ eyebrow, title, sub, active, accent = "var(--green-700)", bg = "var(--cream)", color = "var(--ink)" }) {
+  const dark = color === "#fff" || bg === "var(--green-900)" || bg === "var(--green-700)" || bg === "var(--ink)";
   return (
-    <section style={{ background: bg, color, padding: "96px 0 56px" }}>
-      <div className="container">
+    <section style={{ background: bg, color, position: "relative" }}>
+      <Header light={dark} active={active} />
+      <div className="container" style={{ padding: "56px 0" }}>
         <div className="h-eyebrow" style={{ color: accent }}>{eyebrow}</div>
-        <h1 className="h-display" style={{ fontSize: "clamp(48px, 6vw, 88px)", margin: "12px 0 0", maxWidth: "16ch" }}>{title}</h1>
+        <h1 className="h-display" style={{ fontSize: "clamp(40px, 6vw, 88px)", margin: "12px 0 0", maxWidth: "16ch" }}>{title}</h1>
         {sub && (
-          <p style={{ marginTop: 22, fontSize: 18, color: bg === "var(--cream)" || bg === "var(--paper)" ? "var(--muted)" : "rgba(255,255,255,.75)", maxWidth: 620, lineHeight: 1.55 }}>{sub}</p>
+          <p style={{ marginTop: 22, fontSize: 18, color: dark ? "rgba(255,255,255,.75)" : "var(--muted)", maxWidth: 620, lineHeight: 1.55 }}>{sub}</p>
         )}
       </div>
     </section>
@@ -48,6 +50,7 @@ function BlogPage() {
   return (
     <>
       <PageHero
+        active="blog"
         eyebrow="Блог"
         title="Истории еды, привычек и людей"
         sub="Что мы готовим, как, для кого. Простыми словами — и без занудства про БЖУ."
@@ -100,6 +103,7 @@ function AboutPage() {
   return (
     <>
       <PageHero
+        active="about"
         eyebrow="О нас"
         title="9 лет готовим то, что едим сами"
         sub="SixBox — это не стартап и не маркетинговая обёртка. Это кухня, диетолог и логистика, выросшие из домашней привычки готовить впрок."
@@ -163,7 +167,7 @@ function KitchenPage() {
   ];
   return (
     <>
-      <PageHero eyebrow="Кухня" title="Где готовится ваш рацион" sub="Цех на 200 м² в центре Бишкека. Открыт для посещения по записи: можно увидеть процесс от сырья до упаковки." accent="var(--orange-600)" />
+      <PageHero active="kitchen" eyebrow="Кухня" title="Где готовится ваш рацион" sub="Цех на 200 м² в центре Бишкека. Открыт для посещения по записи: можно увидеть процесс от сырья до упаковки." accent="var(--orange-600)" />
       <section className="section" style={{ background: "var(--paper)" }}>
         <div className="container">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 56 }}>
@@ -223,7 +227,7 @@ function CareersPage() {
   ];
   return (
     <>
-      <PageHero eyebrow="Карьера" title="Команда из 38 человек, которая растёт" sub="Готовим вакансии для тех, кто хочет работать честно: с реальной зарплатой, чёткими задачами и видимым результатом." accent="var(--orange-600)" />
+      <PageHero active="careers" eyebrow="Карьера" title="Команда из 38 человек, которая растёт" sub="Готовим вакансии для тех, кто хочет работать честно: с реальной зарплатой, чёткими задачами и видимым результатом." accent="var(--orange-600)" />
       <section className="section" style={{ background: "var(--paper)" }}>
         <div className="container">
           <SectionHeader eyebrow="Открытые вакансии" title="Сейчас ищем" />
@@ -271,7 +275,7 @@ function PartnersPage() {
   const logos = ["FitZone", "Yoga Lab", "Sport Time", "Hyatt", "Bishkek Park", "Grand Hotel", "ProTrainer", "Студия SOS"];
   return (
     <>
-      <PageHero eyebrow="Партнёрам" title="SixBox для бизнеса" sub="Кормим офисы, фитнес‑клубы, отели и мероприятия. Предсказуемое меню, гибкий объём, отчётность по КБЖУ." bg="var(--green-700)" color="#fff" accent="var(--lime-300)" />
+      <PageHero active="partners" eyebrow="Партнёрам" title="SixBox для бизнеса" sub="Кормим офисы, фитнес‑клубы, отели и мероприятия. Предсказуемое меню, гибкий объём, отчётность по КБЖУ." bg="var(--green-700)" color="#fff" accent="var(--lime-300)" />
       <section className="section" style={{ background: "var(--paper)" }}>
         <div className="container">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
@@ -316,7 +320,7 @@ function DeliveryPage() {
   ];
   return (
     <>
-      <PageHero eyebrow="Доставка" title="Привозим, когда удобно вам" sub="Два слота, бесплатно по городу, бесконтактно. Курьер всегда на связи в WhatsApp." accent="var(--orange-600)" />
+      <PageHero active="delivery" eyebrow="Доставка" title="Привозим, когда удобно вам" sub="Два слота, бесплатно по городу, бесконтактно. Курьер всегда на связи в WhatsApp." accent="var(--orange-600)" />
       <section className="section" style={{ background: "var(--paper)" }}>
         <div className="container">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 56 }}>
@@ -387,7 +391,7 @@ function AllergensPage() {
   const diets = ["Без глютена", "Вегетарианский", "Веганский", "Без лактозы", "Кето", "Низкоуглеводный", "Халяль"];
   return (
     <>
-      <PageHero eyebrow="Аллергены" title="Указываем всё. Заменяем — что можем" sub="На каждой карточке блюда отмечены 14 основных аллергенов. При сложной диете — индивидуальный план с диетологом." accent="var(--orange-600)" />
+      <PageHero active="allergens" eyebrow="Аллергены" title="Указываем всё. Заменяем — что можем" sub="На каждой карточке блюда отмечены 14 основных аллергенов. При сложной диете — индивидуальный план с диетологом." accent="var(--orange-600)" />
       <section className="section" style={{ background: "var(--paper)" }}>
         <div className="container">
           <SectionHeader eyebrow="Чем мы готовы заменить" title="Основные группы" />
@@ -453,6 +457,7 @@ function LegalPage({ kind }) {
   return (
     <>
       <PageHero
+        active={isPrivacy ? "privacy" : "offer"}
         eyebrow="Документы"
         title={isPrivacy ? "Политика конфиденциальности" : "Договор оферты"}
         sub={isPrivacy ? "Как мы работаем с вашими персональными данными — коротко и по‑человечески." : "Условия использования сервиса SixBox."}

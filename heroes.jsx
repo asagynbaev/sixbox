@@ -64,6 +64,7 @@ function HeroDark({ tweaks }) {
         `,
         pointerEvents: "none",
       }} />
+      <Header light active="home" />
       <div className="container" style={{ position: "relative", paddingTop: 80, paddingBottom: 40 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.05fr 1fr", gap: 80, alignItems: "center" }}>
           <div>
@@ -318,6 +319,7 @@ function HeroEditorial({ tweaks }) {
 
   return (
     <section style={{ background: "var(--cream)", position: "relative", overflow: "hidden" }}>
+      <Header active="home" />
       <div className="container" style={{ paddingTop: 56, paddingBottom: 80 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 56 }}>
           {/* Left: hero text + photo collage */}
@@ -386,6 +388,7 @@ function HeroBold({ tweaks }) {
 
   return (
     <section style={{ background: "var(--green-600)", color: "#fff", position: "relative", overflow: "hidden" }}>
+      <Header light active="home" />
       <div className="container" style={{ position: "relative", paddingTop: 32, paddingBottom: 0 }}>
         {/* Top row — split title */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 24, paddingTop: 32 }}>

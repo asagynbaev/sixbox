@@ -10,36 +10,6 @@
 <link rel="stylesheet" href="styles.css" />
 <style>
   html, body { background: var(--paper); }
-  .pagebar {
-    position: fixed;
-    top: 16px; left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-    display: flex;
-    gap: 4px;
-    padding: 6px;
-    background: rgba(7, 38, 15, 0.94);
-    backdrop-filter: blur(20px);
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 20px 50px -10px rgba(0,0,0,.3);
-    max-width: calc(100vw - 32px);
-    overflow-x: auto;
-  }
-  .pagebar button {
-    padding: 10px 16px;
-    border-radius: 999px;
-    color: rgba(255,255,255,.7);
-    font-size: 13px;
-    font-weight: 600;
-    transition: background .15s, color .15s;
-    white-space: nowrap;
-  }
-  .pagebar button.active {
-    background: var(--orange-500);
-    color: #1a0a00;
-  }
-  .pagebar button:hover:not(.active) { color: #fff; }
 </style>
 </head>
 <body>
@@ -110,8 +80,8 @@ function App() {
       {page === "menu" && <MenuPage />}
       {page === "constructor" && <ConstructorPage />}
       {page === "cart" && <CartPage />}
-      {page === "checkout" && (<><Checkout /><Footer /></>)}
-      {page === "account" && (<><AccountDashboard /><Footer /></>)}
+      {page === "checkout" && (<><Header active="checkout" /><Checkout /><Footer /></>)}
+      {page === "account" && (<><Header active="account" /><AccountDashboard /><Footer /></>)}
       {page === "contacts" && <ContactsPage />}
       {page === "blog" && <BlogPage />}
       {page === "about" && <AboutPage />}
@@ -122,18 +92,6 @@ function App() {
       {page === "allergens" && <AllergensPage />}
       {page === "privacy" && <LegalPage kind="privacy" />}
       {page === "offer" && <LegalPage kind="offer" />}
-
-      <div className="pagebar" role="tablist">
-        {pages.map(p => (
-          <button
-            key={p.id}
-            className={page === p.id ? "active" : ""}
-            onClick={() => window.go(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
     </>
   );
 }

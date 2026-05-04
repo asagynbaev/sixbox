@@ -165,54 +165,99 @@ function FoodContainer({ kind = "chicken-rice", label }) {
 }
 
 // ---------- Header / Nav ----------
+const NAV_LINKS = [
+  { id: "home", label: "Главная" },
+  { id: "menu", label: "Меню" },
+  { id: "constructor", label: "Конструктор" },
+  { id: "cart", label: "Корзина" },
+  { id: "checkout", label: "Оплата" },
+  { id: "account", label: "Кабинет" },
+  { id: "contacts", label: "Контакты" },
+];
+
 function Header({ light = false, active = "home", compact = false }) {
-  const links = [
-    { id: "home", label: "Главная" },
-    { id: "menu", label: "Меню" },
-    { id: "plans", label: "Планы" },
-    { id: "calc", label: "Калькулятор" },
-    { id: "about", label: "О нас" },
-  ];
+  const [open, setOpen] = useState(false);
   const isLight = light;
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  const handleNav = (id) => {
+    setOpen(false);
+    window.go?.(id);
+  };
+
   return (
-    <header style={{
-      position: "sticky", top: 0, zIndex: 50,
-      background: isLight ? "rgba(7,38,15,.7)" : "rgba(250,247,240,.85)",
-      backdropFilter: "blur(14px)",
-      borderBottom: `1px solid ${isLight ? "rgba(255,255,255,.08)" : "var(--line)"}`,
-      color: isLight ? "#fff" : "var(--ink)",
-    }}>
-      <div className="container" style={{ display: "flex", alignItems: "center", gap: 32, height: compact ? 64 : 76 }}>
+    <header className={`site-header ${isLight ? "site-header-dark" : "site-header-light"}`}>
+      <div className="container site-header-row" style={{ height: compact ? 64 : 76 }}>
         <Logo light={isLight} />
-        <nav style={{ display: "flex", gap: 6, marginLeft: 24 }}>
-          {links.map(l => (
-            <a key={l.id} href={`#${l.id}`} style={{
-              padding: "8px 14px",
-              borderRadius: 999,
-              fontSize: 14, fontWeight: 500,
-              opacity: active === l.id ? 1 : 0.72,
-              background: active === l.id ? (isLight ? "rgba(255,255,255,.1)" : "rgba(10,18,8,.06)") : "transparent",
-            }}>{l.label}</a>
+        <nav className="site-nav">
+          {NAV_LINKS.map(l => (
+            <button
+              type="button"
+              key={l.id}
+              onClick={() => handleNav(l.id)}
+              className={active === l.id ? "site-nav-link is-active" : "site-nav-link"}
+            >
+              {l.label}
+            </button>
           ))}
         </nav>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.7 }}>
-            {Icons.pin} Бишкек
+        <div className="site-header-actions">
+          <div className="site-header-loc">
+            {Icons.pin} <span>Бишкек</span>
           </div>
           <button className={isLight ? "btn btn-ghost-light" : "btn btn-ghost"} style={{ padding: "10px 16px" }}>
             {Icons.user}
             <span>Войти</span>
           </button>
-          <button className="btn btn-primary" style={{ padding: "10px 18px" }}>
+          <button className="btn btn-primary site-header-cart" style={{ padding: "10px 18px" }} onClick={() => window.go?.("cart")}>
             {Icons.bag}
-            <span>Корзина</span>
+            <span className="site-header-cart-label">Корзина</span>
             <span style={{
               background: "rgba(0,0,0,.15)", padding: "2px 7px", borderRadius: 999,
               fontSize: 11, fontWeight: 700, marginLeft: 4,
             }}>3</span>
           </button>
+          <button
+            type="button"
+            className="site-header-burger"
+            aria-label={open ? "Закрыть меню" : "Открыть меню"}
+            aria-expanded={open}
+            onClick={() => setOpen(v => !v)}
+          >
+            {open ? Icons.close : Icons.menu}
+          </button>
         </div>
       </div>
+
+      {open && (
+        <div className="mobile-menu" role="dialog" aria-modal="true">
+          <nav className="mobile-menu-nav">
+            {NAV_LINKS.map(l => (
+              <button
+                type="button"
+                key={l.id}
+                onClick={() => handleNav(l.id)}
+                className={active === l.id ? "mobile-menu-link is-active" : "mobile-menu-link"}
+              >
+                {l.label}
+                {Icons.arrow}
+              </button>
+            ))}
+          </nav>
+          <div className="mobile-menu-foot">
+            <button className="btn btn-ghost-light" style={{ width: "100%", justifyContent: "center" }}>
+              {Icons.user} <span>Войти</span>
+            </button>
+            <a href="tel:+996555612612" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}>
+              {Icons.phone} <span>+996 555 612 612</span>
+            </a>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
