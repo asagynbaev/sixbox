@@ -19,12 +19,18 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
+<!-- Firebase compat SDKs (loaded as regular scripts so the global `firebase` exists before our code runs) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="firebase-init.js"></script>
+
 <script type="text/babel" src="components.jsx"></script>
 <script type="text/babel" src="heroes.jsx"></script>
 <script type="text/babel" src="sections.jsx"></script>
 <script type="text/babel" src="subpages.jsx"></script>
 <script type="text/babel" src="pages.jsx"></script>
 <script type="text/babel" src="info-pages.jsx"></script>
+<script type="text/babel" src="programs-page.jsx"></script>
 
 <script type="text/babel" data-presets="env,react">
 const { useState, useEffect } = React;
@@ -78,6 +84,7 @@ function App() {
     <>
       {page === "home" && <Landing />}
       {page === "menu" && <MenuPage />}
+      {page === "programs" && <ProgramsPage />}
       {page === "constructor" && <ConstructorPage />}
       {page === "cart" && <CartPage />}
       {page === "checkout" && (<><Header active="checkout" /><Checkout /><Footer /></>)}
@@ -92,6 +99,7 @@ function App() {
       {page === "allergens" && <AllergensPage />}
       {page === "privacy" && <LegalPage kind="privacy" />}
       {page === "offer" && <LegalPage kind="offer" />}
+      {page === "admin" && <AdminPage />}
     </>
   );
 }

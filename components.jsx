@@ -168,9 +168,9 @@ function FoodContainer({ kind = "chicken-rice", label }) {
 const NAV_LINKS = [
   { id: "home", label: "Главная" },
   { id: "menu", label: "Меню" },
+  { id: "programs", label: "Программы" },
   { id: "constructor", label: "Конструктор" },
   { id: "cart", label: "Корзина" },
-  { id: "checkout", label: "Оплата" },
   { id: "account", label: "Кабинет" },
   { id: "contacts", label: "Контакты" },
 ];
@@ -285,7 +285,7 @@ function Footer() {
   const cols = [
     { t: "Сайт", l: [
       { label: "Меню недели", to: "menu" },
-      { label: "Планы питания", to: "home", scroll: "plans" },
+      { label: "Программы питания", to: "programs" },
       { label: "Конструктор", to: "constructor" },
       { label: "Холодильник доверия", to: "home", scroll: "fridge" },
       { label: "Блог", to: "blog" },
@@ -356,9 +356,10 @@ function Footer() {
         </div>
         <div style={{ marginTop: 60, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,.08)", display: "flex", justifyContent: "space-between", fontSize: 12, opacity: 0.55 }}>
           <div>© 2026 SixBox · perfect meals since 2017</div>
-          <div style={{ display: "flex", gap: 24 }}>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
             <button type="button" onClick={() => window.go?.("privacy")} style={{ background: "transparent", border: 0, color: "inherit", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Политика конфиденциальности</button>
             <button type="button" onClick={() => window.go?.("offer")} style={{ background: "transparent", border: 0, color: "inherit", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Договор оферты</button>
+            <button type="button" onClick={() => window.go?.("admin")} style={{ background: "transparent", border: 0, color: "inherit", fontSize: 12, cursor: "pointer", padding: 0, fontFamily: "inherit", opacity: 0.6 }}>Админка</button>
           </div>
         </div>
       </div>
