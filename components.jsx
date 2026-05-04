@@ -170,7 +170,6 @@ const NAV_LINKS = [
   { id: "menu", label: "Меню" },
   { id: "programs", label: "Программы" },
   { id: "constructor", label: "Конструктор" },
-  { id: "account", label: "Кабинет" },
   { id: "contacts", label: "Контакты" },
 ];
 
@@ -315,10 +314,13 @@ function Header({ light = false, active = "home", compact = false }) {
           <div className="mobile-menu-foot">
             {user ? (
               <>
-                <div style={{
+                <button onClick={() => handleNav("account")} style={{
                   padding: 14, borderRadius: 14,
                   background: "rgba(255,255,255,.06)",
+                  border: "1px solid rgba(255,255,255,.06)",
                   display: "flex", alignItems: "center", gap: 12,
+                  width: "100%", textAlign: "left",
+                  color: "#fff", fontFamily: "inherit", cursor: "pointer",
                 }}>
                   <span style={{
                     width: 36, height: 36, borderRadius: 18,
@@ -326,11 +328,12 @@ function Header({ light = false, active = "home", compact = false }) {
                     display: "grid", placeItems: "center",
                     fontSize: 14, fontWeight: 700,
                   }}>{(user.phoneNumber || "?").slice(-2)}</span>
-                  <div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>Вошли как</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>Открыть кабинет</div>
                     <div style={{ fontWeight: 600 }}>{phoneShort}</div>
                   </div>
-                </div>
+                  {Icons.arrow}
+                </button>
                 <button className="btn btn-ghost-light" style={{ width: "100%", justifyContent: "center" }} onClick={async () => { setOpen(false); await window.AuthApi?.signOut(); }}>
                   Выйти
                 </button>

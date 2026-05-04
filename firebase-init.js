@@ -122,31 +122,32 @@ const UsersApi = {
 
   async addToCart(uid, item) {
     if (!db || !uid) throw new Error("Нет uid");
-    return this.ref(uid).update({
+    // Use set+merge so it works even if the user doc doesn't exist yet.
+    return this.ref(uid).set({
       cart: firebase.firestore.FieldValue.arrayUnion({
         ...item,
         _id: item._id || (Date.now() + "_" + Math.random().toString(36).slice(2, 7)),
       }),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
   },
 
   async removeFromCart(uid, itemId) {
     if (!db || !uid) throw new Error("Нет uid");
     const snap = await this.ref(uid).get();
     const cart = snap.data()?.cart || [];
-    return this.ref(uid).update({
+    return this.ref(uid).set({
       cart: cart.filter(i => i._id !== itemId),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
   },
 
   async clearCart(uid) {
     if (!db || !uid) throw new Error("Нет uid");
-    return this.ref(uid).update({
+    return this.ref(uid).set({
       cart: [],
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
   },
 };
 

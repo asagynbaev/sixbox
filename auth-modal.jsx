@@ -252,7 +252,8 @@ function useAuthUser() {
   return user;
 }
 
-// Hook: live user profile from Firestore (name, cart, subscription)
+// Hook: live user profile from Firestore (name, cart, subscription).
+// Also ensures the profile doc exists for the current user (lazy create).
 function useUserProfile() {
   const user = useAuthUser();
   const [profile, setProfile] = useStateA(null);
@@ -260,6 +261,8 @@ function useUserProfile() {
   useEffectA(() => {
     if (!user || !window.UsersApi) { setProfile(null); return; }
     setLoading(true);
+    // Lazy create profile doc if missing (handles users who signed in before this code existed)
+    window.UsersApi.ensure(user).catch(e => console.warn("[ensure profile]", e));
     const unsub = window.UsersApi.watch(user.uid, (data) => {
       setProfile(data);
       setLoading(false);
