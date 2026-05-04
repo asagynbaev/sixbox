@@ -397,18 +397,20 @@ function Segmented({ value, onChange, options }) {
 function Slider({ min, max, value, onChange }) {
   const pct = ((value - min) / (max - min)) * 100;
   return (
-    <div style={{ position: "relative", height: 32, display: "flex", alignItems: "center" }}>
-      <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: "rgba(10,18,8,.08)" }} />
-      <div style={{ position: "absolute", left: 0, width: `${pct}%`, height: 4, borderRadius: 2, background: "var(--green-600)" }} />
-      <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
-        style={{
-          position: "absolute", inset: 0, width: "100%", height: 32, opacity: 0, cursor: "pointer",
-        }} />
+    <div style={{ position: "relative", height: 32, display: "flex", alignItems: "center", touchAction: "none" }}>
+      <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: "rgba(10,18,8,.08)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", left: 0, width: `${pct}%`, height: 4, borderRadius: 2, background: "var(--green-600)", pointerEvents: "none" }} />
       <div style={{
         position: "absolute", left: `calc(${pct}% - 12px)`,
         width: 24, height: 24, borderRadius: 12, background: "#fff",
         border: "2px solid var(--green-600)", boxShadow: "0 2px 8px rgba(0,0,0,.1)",
+        pointerEvents: "none",
       }} />
+      <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
+        style={{
+          position: "absolute", inset: 0, width: "100%", height: 32, margin: 0, opacity: 0, cursor: "pointer",
+          WebkitAppearance: "none", appearance: "none", background: "transparent",
+        }} />
     </div>
   );
 }

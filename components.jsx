@@ -232,7 +232,7 @@ function Header({ light = false, active = "home", compact = false }) {
         </div>
       </div>
 
-      {open && (
+      {open && ReactDOM.createPortal(
         <div className="mobile-menu" role="dialog" aria-modal="true">
           <nav className="mobile-menu-nav">
             {NAV_LINKS.map(l => (
@@ -255,7 +255,8 @@ function Header({ light = false, active = "home", compact = false }) {
               {Icons.phone} <span>+996 555 612 612</span>
             </a>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </header>
   );
