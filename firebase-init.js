@@ -35,11 +35,19 @@ const AuthApi = {
   // Pass an element id (string) or DOM node.
   ensureRecaptcha(containerIdOrEl) {
     if (!auth) throw new Error("Firebase Auth не инициализирован");
+    // Tear down previous verifier if any
     if (window._recaptcha) {
       try { window._recaptcha.clear(); } catch (e) { /* ignore */ }
       window._recaptcha = null;
     }
-    window._recaptcha = new firebase.auth.RecaptchaVerifier(containerIdOrEl, {
+    // Resolve container, then wipe its children so reCAPTCHA can render fresh
+    const el = typeof containerIdOrEl === "string"
+      ? document.getElementById(containerIdOrEl)
+      : containerIdOrEl;
+    if (el?.innerHTML) el.innerHTML = "";
+    if (!el) throw new Error("Контейнер reCAPTCHA не найден");
+
+    window._recaptcha = new firebase.auth.RecaptchaVerifier(el, {
       size: "invisible",
       callback: () => {},
       "expired-callback": () => {

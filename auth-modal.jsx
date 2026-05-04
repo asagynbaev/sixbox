@@ -46,8 +46,6 @@ function AuthModal({ open, onClose }) {
     setError("");
     try {
       const verifier = window.AuthApi.ensureRecaptcha(recaptchaRef.current);
-      // Required: render() before sending in some flows
-      await verifier.render().catch(() => {});
       await window.AuthApi.sendCode(fullPhone, verifier);
       setStep("code");
       setResendCountdown(60);
